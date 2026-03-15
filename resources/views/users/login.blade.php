@@ -7,7 +7,6 @@
 
         <form action="{{ route('users.login') }}" method="POST">
             @csrf
-            @method('POST')
             @if ($errors->any())
             <div class="error-message">
                 {{ $errors->first() }}

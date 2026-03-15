@@ -6,10 +6,13 @@ use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller{
 
+    public function showDashboard(){
+        return view('dashboard');
+    }//showDashboard
+
     public function showRegister(){
         return view('users.register');
-    }
-
+    }//showRegister
     public function register(Request $request){
         $data = $request->validate([
             'username' => 'required',
@@ -25,17 +28,17 @@ class UserController extends Controller{
     }//showLogin
     public function login(Request $request){
         $data = $request->validate([
-            'user' => 'required',
+            'username' => 'required',
             'password' => 'required',
         ]);
-        $user = User::where('user', $data['user'])->first();
+        $user = User::where('username', $data['username'])->first();
         if (!$user) {
             return redirect()->route('users.login')->with('error', 'Invalid username');
         }
-        if (!Hash::check($data['password'], $user->password)) {
+        elseif (!Hash::check($data['password'], $user->password)) {
             return redirect()->route('users.login')->with('error', 'Invalid password');
         }
-        return redirect()->route('dashboard')->with('success', 'Logged in successfully');
+        return redirect()->route('users.dashboard')->with('success', 'Logged in successfully');
     }//login
 
     public function showLogout(){
