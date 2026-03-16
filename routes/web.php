@@ -7,6 +7,7 @@ Route::get('/clothshop', function () { return view('dashboard'); });
 Route::get('/dashboard', function () { return view('dashboard'); });
 
 use App\Http\Controllers\UserController;
+Route::get('/profile', [UserController::class, 'showProfile'])->name('users.profile');
 Route::get('/dashboard', [UserController::class, 'showDashboard'])->name('users.dashboard');
 Route::get('/login', [UserController::class, 'showLogin'])->name('users.login');
 Route::post('/login', [UserController::class, 'login'])->name('users.login');

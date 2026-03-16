@@ -14,8 +14,11 @@
         <div class="navbar-brand">Online Shop</div>
         <nav class="nav-links">
             <a href="{{ url('/dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'nav-link-active' : '' }}">Dashboard</a>
-            <a href="{{ url('/login') }}" class="nav-link {{ request()->routeIs('users.login') ? 'nav-link-active' : '' }}">Login</a>
-            <a href="{{ url('/register') }}" class="nav-link {{ request()->routeIs('users.register') ? 'nav-link-active' : '' }}">Register</a>
+            @auth
+                <a href="{{ route('users.profile') }}" class="nav-link {{ request()->routeIs('users.profile') ? 'nav-link-active' : '' }}">Profile</a>
+            @else
+                <a href="{{ route('users.login') }}" class="nav-link {{ request()->routeIs('users.login') ? 'nav-link-active' : '' }}">Login</a>
+            @endauth
         </nav>
     </header>
 

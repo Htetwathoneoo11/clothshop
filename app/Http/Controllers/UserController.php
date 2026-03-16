@@ -3,6 +3,8 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class UserController extends Controller{
 
@@ -38,13 +40,23 @@ class UserController extends Controller{
         elseif (!Hash::check($data['password'], $user->password)) {
             return redirect()->route('users.login')->with('error', 'Invalid password');
         }
-        return redirect()->route('users.dashboard')->with('success', 'Logged in successfully');
+        Auth::login($user);
+        $user->last_login_at = Carbon::now();
+        $user->last_login_ip = $request->ip();
+        $user->user_agent = $request->header('User-Agent');
+        // $user->save();
+        return redirect()->route('users.profile')->with('success', 'Logged in successfully');
     }//login
+
+    public function showProfile(){
+        return view('users.profile');
+    }//showProfile
 
     public function showLogout(){
         return view('users.logout');
     }//showLogout
     public function logout(Request $request){
+        Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
         return redirect()->route('users.login')->with('success', 'Logged out successfully');
