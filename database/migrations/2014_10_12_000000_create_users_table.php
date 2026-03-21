@@ -21,6 +21,7 @@ return new class extends Migration
             $table->timestamps();
             $table->string('role')->default('customer');
             $table->string('status')->default('active');
+
         });
     }
 

@@ -2,9 +2,10 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () { return view('welcome'); });
-Route::get('/clothshop', function () { return view('dashboard'); });
-Route::get('/dashboard', function () { return view('dashboard'); });
+use App\Http\Controllers\Controller;
+Route::get('/', [Controller::class, 'showDashboard'])->name('dashboard');
+Route::get('/clothshop', [Controller::class, 'showDashboard'])->name('dashboard');
+Route::get('/dashboard', [Controller::class, 'showDashboard'])->name('dashboard');
 
 use App\Http\Controllers\UserController;
 Route::get('/profile', [UserController::class, 'showProfile'])->name('users.profile');

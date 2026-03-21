@@ -8,10 +8,6 @@ use Carbon\Carbon;
 
 class UserController extends Controller{
 
-    public function showDashboard(){
-        return view('dashboard');
-    }//showDashboard
-
     public function showRegister(){
         return view('users.register');
     }//showRegister
@@ -35,16 +31,16 @@ class UserController extends Controller{
         ]);
         $user = User::where('username', $data['username'])->first();
         if (!$user) {
-            return redirect()->route('users.login')->with('error', 'Invalid username');
+            return redirect()->route('users.login')->with('error', 'Invalid username')->withInput();
         }
         elseif (!Hash::check($data['password'], $user->password)) {
-            return redirect()->route('users.login')->with('error', 'Invalid password');
+            return redirect()->route('users.login')->with('error', 'Invalid password')->withInput();
         }
         Auth::login($user);
         $user->last_login_at = Carbon::now();
         $user->last_login_ip = $request->ip();
         $user->user_agent = $request->header('User-Agent');
-        // $user->save();
+        $user->save();
         return redirect()->route('users.profile')->with('success', 'Logged in successfully');
     }//login
 

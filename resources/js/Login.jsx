@@ -1,12 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 
-function LoginForm({ actionUrl, registerUrl, csrfToken, initialError }) {
-    const [username, setUsername] = useState('');
+function LoginForm({ actionUrl, registerUrl, csrfToken, initialError, initialUsername }) {
+    const [username, setUsername] = useState(initialUsername || '');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState(initialError || '');
     const [loading, setLoading] = useState(false);
+    const errorRef = useRef(null);
+
+    useEffect(() => {
+        if (error && errorRef.current) {
+            errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    }, [error]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -22,18 +29,28 @@ function LoginForm({ actionUrl, registerUrl, csrfToken, initialError }) {
         }
 
         setLoading(true);
-        const form = e.target;
-        form.submit();
+        e.target.submit();
     };
+
+    const hasError = Boolean(error);
 
     return (
         <div className="login-box">
             <h2>Sign in</h2>
-            <form action={actionUrl} method="POST" onSubmit={handleSubmit}>
+            <form action={actionUrl} method="POST" onSubmit={handleSubmit} noValidate>
                 <input type="hidden" name="_token" value={csrfToken} />
-                {error && (
-                    <div className="error-message" role="alert">
-                        {error}
+                {hasError && (
+                    <div
+                        ref={errorRef}
+                        id="login-error-message"
+                        className="error-message error-message-visible"
+                        role="alert"
+                        aria-live="polite"
+                    >
+                        <span className="error-message-icon" aria-hidden="true">
+                            !
+                        </span>
+                        <span className="error-message-text">{error}</span>
                     </div>
                 )}
                 <div className="form-group">
@@ -44,10 +61,15 @@ function LoginForm({ actionUrl, registerUrl, csrfToken, initialError }) {
                         name="username"
                         placeholder="Enter username"
                         value={username}
-                        onChange={(e) => setUsername(e.target.value)}
+                        onChange={(e) => {
+                            setUsername(e.target.value);
+                            if (error) setError('');
+                        }}
                         autoComplete="username"
-                        required
                         disabled={loading}
+                        aria-invalid={hasError}
+                        aria-describedby={hasError ? 'login-error-message' : undefined}
+                        className={hasError ? 'input-error' : undefined}
                     />
                 </div>
                 <div className="form-group">
@@ -59,10 +81,15 @@ function LoginForm({ actionUrl, registerUrl, csrfToken, initialError }) {
                             name="password"
                             placeholder="Enter password"
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
+                            onChange={(e) => {
+                                setPassword(e.target.value);
+                                if (error) setError('');
+                            }}
                             autoComplete="current-password"
-                            required
                             disabled={loading}
+                            aria-invalid={hasError}
+                            aria-describedby={hasError ? 'login-error-message' : undefined}
+                            className={hasError ? 'input-error' : undefined}
                         />
                         <button
                             type="button"
@@ -95,6 +122,7 @@ if (container) {
             registerUrl={container.dataset.registerUrl}
             csrfToken={container.dataset.csrf}
             initialError={container.dataset.error || ''}
+            initialUsername={container.dataset.username || ''}
         />
     );
 }

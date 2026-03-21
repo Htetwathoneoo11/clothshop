@@ -3,10 +3,8 @@ import './bootstrap';
 // Dashboard interactions + Login page React mount
 document.addEventListener('DOMContentLoaded', () => {
     // Login page: load React form when root exists (single entry avoids Vite React preamble error)
-    if (document.getElementById('login-root')) {
-        import('./Login.jsx');
-    }
-
+    import('./Login.jsx');
+    
     // Products carousel (dashboard)
     const track = document.getElementById('productsCarouselTrack');
     const leftArrow = document.querySelector('.products-arrow-left');
