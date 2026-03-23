@@ -8,6 +8,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     @viteReactRefresh
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @vite(['resources/css/login.css'], 'resources/js/login.js')
     @stack('styles')
 </head>
 <body class="flex flex-col min-h-screen">

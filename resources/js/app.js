@@ -2,8 +2,16 @@ import './bootstrap';
 
 // Dashboard interactions + Login page React mount
 document.addEventListener('DOMContentLoaded', () => {
-    // Login page: load React form when root exists (single entry avoids Vite React preamble error)
-    import('./Login.jsx');
+    // Mount React forms only on relevant pages
+    if (document.getElementById('login-root')) {
+        import('./Login.jsx');
+    }
+    if (document.getElementById('register-root')) {
+        import('./Register.jsx');
+    }
+    if (document.getElementById('profile-root')) {
+        import('./Profile.jsx');
+    }
     
     // Products carousel (dashboard)
     const track = document.getElementById('productsCarouselTrack');
