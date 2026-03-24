@@ -25,6 +25,12 @@
     justify-content: center;
 }
 
+.login-page #logout-root {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
 .login-box {
     width: 100%;
     max-width: 400px;
@@ -56,6 +62,18 @@
     box-shadow: 0 10px 32px rgba(15, 23, 42, 0.12);
     border: 1px solid #e5e7eb;
     animation: fadeIn 0.4s ease-out forwards;
+}
+
+.logout-box {
+    width: 100%;
+    max-width: 420px;
+    background: #ffffff;
+    border-radius: 14px;
+    padding: 36px 32px;
+    box-shadow: 0 10px 32px rgba(15, 23, 42, 0.12);
+    border: 1px solid #e5e7eb;
+    animation: fadeIn 0.4s ease-out forwards;
+    text-align: center;
 }
 
 .login-box h2 {
@@ -93,6 +111,39 @@
 }
 
 .profile-box .profile-logout-link:hover {
+    text-decoration: underline;
+}
+
+.logout-box h2 {
+    margin: 0 0 14px 0;
+    font-size: 22px;
+    color: #111827;
+}
+
+.logout-box p {
+    margin: 0 0 20px 0;
+    color: #374151;
+}
+
+.logout-box form {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.logout-box .login-submit {
+    width: 100%;
+}
+
+.logout-box a {
+    margin-top: 12px;
+    color: #3b82f6;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.logout-box a:hover {
     text-decoration: underline;
 }
 
@@ -282,17 +333,53 @@
 
 .login-box .password-toggle {
     position: absolute;
-    right: 12px;
+    right: 8px;
     top: 50%;
     transform: translateY(-50%);
-    background: none;
-    border: none;
+    background: #f8fafc;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
     color: #6b7280;
     cursor: pointer;
-    font-size: 13px;
-    padding: 4px;
+    min-width: 34px;
+    min-height: 34px;
+    padding: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s ease, background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
 }
 
 .login-box .password-toggle:hover {
-    color: #374151;
+    color: #1f2937;
+    background: #eef2ff;
+    border-color: #c7d2fe;
+}
+
+.login-box .password-toggle:focus-visible {
+    outline: none;
+    color: #1f2937;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.24);
+}
+
+.login-box .password-toggle:active {
+    transform: translateY(-50%) scale(0.97);
+}
+
+.login-box .password-toggle.password-toggle-active {
+    color: #1d4ed8;
+    background: #eff6ff;
+    border-color: #93c5fd;
+}
+
+.login-box .password-toggle:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: translateY(-50%);
+}
+
+.login-box .password-toggle svg {
+    width: 18px;
+    height: 18px;
 }

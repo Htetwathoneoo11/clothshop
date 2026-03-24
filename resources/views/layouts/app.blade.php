@@ -25,6 +25,13 @@
         </nav>
     </header>
 
+    @if (session('success'))
+        <div class="success-message toast-notification" role="status" aria-live="polite">
+            <span>{{ session('success') }}</span>
+            <button type="button" class="toast-close" aria-label="Close notification">&times;</button>
+        </div>
+    @endif
+
     {{-- Main content --}}
     <main class="@yield('main-class', 'content') flex-grow">
         @yield('content')

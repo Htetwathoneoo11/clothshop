@@ -12,6 +12,27 @@ document.addEventListener('DOMContentLoaded', () => {
     if (document.getElementById('profile-root')) {
         import('./Profile.jsx');
     }
+    if (document.getElementById('logout-root')) {
+        import('./Logout.jsx');
+    }
+
+    // Toast notification bubble
+    const toast = document.querySelector('.toast-notification');
+    if (toast) {
+        const hideToast = () => {
+            toast.classList.add('toast-hide');
+            window.setTimeout(() => {
+                toast.remove();
+            }, 220);
+        };
+
+        const closeBtn = toast.querySelector('.toast-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', hideToast);
+        }
+
+        window.setTimeout(hideToast, 5000);
+    }
     
     // Products carousel (dashboard)
     const track = document.getElementById('productsCarouselTrack');

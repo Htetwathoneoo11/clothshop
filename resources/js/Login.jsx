@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Eye, EyeOff } from 'lucide-react';
 
 function LoginForm({ actionUrl, registerUrl, csrfToken, initialError, initialUsername }) {
     const [username, setUsername] = useState(initialUsername || '');
@@ -93,12 +94,14 @@ function LoginForm({ actionUrl, registerUrl, csrfToken, initialError, initialUse
                         />
                         <button
                             type="button"
-                            className="password-toggle"
+                            className={`password-toggle${showPassword ? ' password-toggle-active' : ''}`}
                             onClick={() => setShowPassword((s) => !s)}
                             aria-label={showPassword ? 'Hide password' : 'Show password'}
-                            tabIndex={-1}
+                            aria-pressed={showPassword}
+                            title={showPassword ? 'Hide password' : 'Show password'}
+                            disabled={loading}
                         >
-                            {showPassword ? 'Hide' : 'Show'}
+                            {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
                         </button>
                     </div>
                 </div>

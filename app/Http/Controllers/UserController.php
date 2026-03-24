@@ -18,7 +18,8 @@ class UserController extends Controller{
             'password' => 'required',
         ]);
         $user = User::create($data);
-        return redirect()->route('users.login')->with('success', 'User registered successfully, please login');
+        Auth::login($user);
+        return redirect()->route('dashboard')->with('success', 'Your account has been created successfully.');
     }//register
 
     public function showLogin(){

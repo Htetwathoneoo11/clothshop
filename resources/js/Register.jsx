@@ -1,10 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Eye, EyeOff } from 'lucide-react';
 
 function RegisterForm({ actionUrl, loginUrl, csrfToken, initialError, initialUsername, initialEmail }) {
     const [username, setUsername] = useState(initialUsername || '');
     const [email, setEmail] = useState(initialEmail || '');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState(initialError || '');
     const [loading, setLoading] = useState(false);
     const errorRef = useRef(null);
@@ -95,21 +97,34 @@ function RegisterForm({ actionUrl, loginUrl, csrfToken, initialError, initialUse
                 </div>
                 <div className="form-group">
                     <label htmlFor="register-password">Password</label>
-                    <input
-                        type="password"
-                        id="register-password"
-                        name="password"
-                        placeholder="Enter Password"
-                        value={password}
-                        onChange={(e) => {
-                            setPassword(e.target.value);
-                            if (error) setError('');
-                        }}
-                        disabled={loading}
-                        aria-invalid={hasError}
-                        aria-describedby={hasError ? 'register-error-message' : undefined}
-                        className={hasError ? 'input-error' : undefined}
-                    />
+                    <div className="password-wrap">
+                        <input
+                            type={showPassword ? 'text' : 'password'}
+                            id="register-password"
+                            name="password"
+                            placeholder="Enter Password"
+                            value={password}
+                            onChange={(e) => {
+                                setPassword(e.target.value);
+                                if (error) setError('');
+                            }}
+                            disabled={loading}
+                            aria-invalid={hasError}
+                            aria-describedby={hasError ? 'register-error-message' : undefined}
+                            className={hasError ? 'input-error' : undefined}
+                        />
+                        <button
+                            type="button"
+                            className={`password-toggle${showPassword ? ' password-toggle-active' : ''}`}
+                            onClick={() => setShowPassword((s) => !s)}
+                            aria-label={showPassword ? 'Hide password' : 'Show password'}
+                            aria-pressed={showPassword}
+                            title={showPassword ? 'Hide password' : 'Show password'}
+                            disabled={loading}
+                        >
+                            {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+                        </button>
+                    </div>
                 </div>
                 <button type="submit" className="login-submit" disabled={loading}>
                     {loading ? 'Registering...' : 'Register'}
