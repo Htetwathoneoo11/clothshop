@@ -14,4 +14,8 @@ class VerifyCsrfToken extends Middleware
     protected $except = [
         //
     ];
+    // protected function runningUnitTests()
+    // {
+    //     return false;
+    // }// Override to disable CSRF protection during testing
 }

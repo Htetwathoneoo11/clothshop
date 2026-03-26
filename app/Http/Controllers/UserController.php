@@ -42,7 +42,7 @@ class UserController extends Controller{
         $user->last_login_ip = $request->ip();
         $user->user_agent = $request->header('User-Agent');
         $user->save();
-        return redirect()->route('users.profile')->with('success', 'Logged in successfully');
+        return redirect()->route('dashboard')->with('success', 'Logged in successfully');
     }//login
 
     public function showProfile(){
