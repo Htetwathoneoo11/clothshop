@@ -1,18 +1,29 @@
 <?php
 
+use App\Http\Controllers\CartController;
+use App\Http\Controllers\CheckoutController;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Controller;
 Route::get('/', [Controller::class, 'showDashboard'])->name('dashboard');
 Route::get('/clothshop', [Controller::class, 'showDashboard'])->name('dashboard');
-Route::get('/dashboard', [Controller::class, 'showDashboard'])->name('dashboard');
+Route::get('/dashboard', [Controller::class, 'showDashboard'])->name('users.dashboard');
 
 use App\Http\Controllers\UserController;
 Route::get('/profile', [UserController::class, 'showProfile'])->name('users.profile');
-Route::get('/dashboard', [UserController::class, 'showDashboard'])->name('users.dashboard');
 Route::get('/login', [UserController::class, 'showLogin'])->name('users.login');
 Route::post('/login', [UserController::class, 'login'])->name('users.login');
 Route::get('/register', [UserController::class, 'showRegister'])->name('users.register');
 Route::post('/register', [UserController::class, 'register'])->name('users.register');
 Route::get('/logout', [UserController::class, 'showLogout'])->name('users.logout');
 Route::post('/logout', [UserController::class, 'logout'])->name('users.logout');
+
+Route::middleware('auth')->group(function () {
+    Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+    Route::get('/cart', [CartController::class, 'index'])->name('cart.index');
+    Route::post('/cart/update/{cartItem}', [CartController::class, 'update'])->name('cart.update');
+    Route::post('/cart/remove/{cartItem}', [CartController::class, 'remove'])->name('cart.remove');
+
+    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+    Route::post('/checkout', [CheckoutController::class, 'store'])->name('checkout.store');
+});
