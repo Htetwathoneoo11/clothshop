@@ -15,7 +15,7 @@ return new class extends Migration
             $table->timestamp('last_login_at')->nullable();
             $table->string('last_login_ip', 45)->nullable();
             $table->string('user_agent', 255)->nullable();
-            $table->integer('role')->default(0)->change();//customer
+            $table->integer('role')->default(1)->change();//customer
             $table->integer('status')->default(1)->change();//active
         });
     }

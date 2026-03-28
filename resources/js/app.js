@@ -1,4 +1,5 @@
 import './bootstrap';
+import './product.js';
 
 // Dashboard interactions + Login page React mount
 document.addEventListener('DOMContentLoaded', () => {
@@ -14,6 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (document.getElementById('logout-root')) {
         import('./Logout.jsx');
+    }
+    if (document.getElementById('product-filter-root')) {
+        import('./ProductFilter.jsx');
     }
 
     // Toast notification bubble

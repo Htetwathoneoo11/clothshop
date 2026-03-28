@@ -5,9 +5,11 @@ use App\Http\Controllers\CheckoutController;
 use Illuminate\Support\Facades\Route;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\ProductController;
 Route::get('/', [Controller::class, 'showDashboard'])->name('dashboard');
 Route::get('/clothshop', [Controller::class, 'showDashboard'])->name('dashboard');
 Route::get('/dashboard', [Controller::class, 'showDashboard'])->name('users.dashboard');
+Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
 
 use App\Http\Controllers\UserController;
 Route::get('/profile', [UserController::class, 'showProfile'])->name('users.profile');

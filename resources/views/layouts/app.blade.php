@@ -6,8 +6,9 @@
     <title>@yield('title', 'My App')</title>
     <script src="https://cdn.tailwindcss.com"></script>
     @viteReactRefresh
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
-    @vite(['resources/css/login.css', 'resources/js/Login.jsx', 'resources/js/Register.jsx'])
+    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/Login.jsx', 'resources/js/Register.jsx'])
+    @vite(['resources/css/product.css', 'resources/js/product.js', 'resources/js/ProductFilter.jsx'])
+    @vite(['resources/css/login.css','resources/js/Login.jsx','resources/js/Logout.jsx', 'resources/js/Profile.jsx', 'resources/js/Register.jsx'])
     @stack('styles')
 </head>
 <body class="flex flex-col min-h-screen">
@@ -17,7 +18,8 @@
         <a href="{{ url('/dashboard') }}" class="navbar-brand"><img src="{{ asset('images/logo.png') }}" alt="Logo" class="logo"></a>
         </div>
         <nav class="nav-links">
-            <a href="{{ url('/dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') || request()->routeIs('users.dashboard') ? 'nav-link-active' : '' }}">Dashboard</a>
+            <a href="{{ url('/dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') || request()->routeIs('users.dashboard') || request()->routeIs('products.show') ? 'nav-link-active' : '' }}">Dashboard</a>
+                    
             @auth
                 <a href="{{ route('users.profile') }}" class="nav-link {{ request()->routeIs('users.profile') ? 'nav-link-active' : '' }}">Profile</a>
                 <a href="{{ route('cart.index') }}" class="nav-link {{ request()->routeIs('cart.*') ? 'nav-link-active' : '' }}">Cart ({{ $cartCount ?? 0 }})</a>

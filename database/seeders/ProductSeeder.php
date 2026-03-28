@@ -104,6 +104,42 @@ class ProductSeeder extends Seeder
                     ['color' => 'Camel', 'size' => 'L', 'price' => 134.00, 'stock' => 4, 'sku' => 'COAT-CML-L'],
                 ],
             ],
+            [
+                'name' => 'Running Sneakers',
+                'category' => 'Footwear',
+                'brand' => 'SprintCore',
+                'description' => 'Lightweight running sneakers with breathable mesh.',
+                'image_url' => 'https://images.unsplash.com/photo-1542291026-7eec264c27ff',
+                'variants' => [
+                    ['color' => 'Black', 'size' => '41', 'price' => 74.99, 'stock' => 12, 'sku' => 'SNK-BLK-41'],
+                    ['color' => 'Black', 'size' => '42', 'price' => 74.99, 'stock' => 10, 'sku' => 'SNK-BLK-42'],
+                    ['color' => 'White', 'size' => '42', 'price' => 76.99, 'stock' => 9, 'sku' => 'SNK-WHT-42'],
+                ],
+            ],
+            [
+                'name' => 'Leather Belt',
+                'category' => 'Accessories',
+                'brand' => 'OakCraft',
+                'description' => 'Genuine leather belt with matte buckle finish.',
+                'image_url' => 'https://images.unsplash.com/photo-1618354691792-d1d42acfd860',
+                'variants' => [
+                    ['color' => 'Brown', 'size' => 'M', 'price' => 24.00, 'stock' => 15, 'sku' => 'BLT-BRN-M'],
+                    ['color' => 'Brown', 'size' => 'L', 'price' => 24.00, 'stock' => 13, 'sku' => 'BLT-BRN-L'],
+                    ['color' => 'Black', 'size' => 'L', 'price' => 25.50, 'stock' => 11, 'sku' => 'BLT-BLK-L'],
+                ],
+            ],
+            [
+                'name' => 'Summer Dress',
+                'category' => 'Dresses',
+                'brand' => 'SunMuse',
+                'description' => 'Flowy midi dress designed for warm weather comfort.',
+                'image_url' => 'https://images.unsplash.com/photo-1515372039744-b8f02a3ae446',
+                'variants' => [
+                    ['color' => 'Floral', 'size' => 'S', 'price' => 54.50, 'stock' => 10, 'sku' => 'DRS-FLR-S'],
+                    ['color' => 'Floral', 'size' => 'M', 'price' => 54.50, 'stock' => 9, 'sku' => 'DRS-FLR-M'],
+                    ['color' => 'Blue', 'size' => 'M', 'price' => 56.00, 'stock' => 8, 'sku' => 'DRS-BLU-M'],
+                ],
+            ],
         ];
 
         foreach ($products as $product) {

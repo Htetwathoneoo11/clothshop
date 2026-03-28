@@ -60,7 +60,7 @@ class AuthTest extends TestCase
             'password' => 'correctpass',
         ]);
 
-        $response->assertRedirect(route('users.profile'));
+        $response->assertRedirect(route('dashboard'));
         $this->assertAuthenticatedAs($user);
         $response->assertSessionHas('success', 'Logged in successfully');
     }//TL-06
