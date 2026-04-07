@@ -1,3 +1,6 @@
+# Local working specification (update per user-comment improvement; omit from version control if preferred)
+/SPECIFICATION.md
+
 /.phpunit.cache
 /node_modules
 /public/build

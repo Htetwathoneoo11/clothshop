@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Eye, EyeOff } from 'lucide-react';
 
-function LoginForm({ actionUrl, registerUrl, csrfToken, initialError, initialUsername }) {
+export default function LoginForm() {
     const [username, setUsername] = useState(initialUsername || '');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -16,10 +16,10 @@ function LoginForm({ actionUrl, registerUrl, csrfToken, initialError, initialUse
         }
     }, [error]);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-
+    
         if (!username.trim()) {
             setError('Please enter your username.');
             return;
@@ -28,17 +28,36 @@ function LoginForm({ actionUrl, registerUrl, csrfToken, initialError, initialUse
             setError('Please enter your password.');
             return;
         }
-
+    
         setLoading(true);
-        e.target.submit();
+    
+        try {
+            
+            await window.axios.get('/sanctum/csrf-cookie');
+    
+            const response = await window.axios.post('/api/auth/login', {
+                username,
+                password,
+            });
+    
+            if (response.status === 200) {
+                window.location.href = '/dashboard';
+            } else {
+                setError(response.data.message || 'Login failed.');
+            }
+        } catch (err) {
+            setError('Network error. Please try again.');
+        } finally {
+            setLoading(false);
+        }
     };
-
+    
     const hasError = Boolean(error);
 
     return (
         <div className="login-box">
             <h2>Sign in</h2>
-            <form action={actionUrl} method="POST" onSubmit={handleSubmit} noValidate>
+            <form onSubmit={handleSubmit} noValidate>
                 <input type="hidden" name="_token" value={csrfToken} />
                 {hasError && (
                     <div
@@ -116,16 +135,3 @@ function LoginForm({ actionUrl, registerUrl, csrfToken, initialError, initialUse
     );
 }
 
-const container = document.getElementById('login-root');
-if (container) {
-    const root = createRoot(container);
-    root.render(
-        <LoginForm
-            actionUrl={container.dataset.action}
-            registerUrl={container.dataset.registerUrl}
-            csrfToken={container.dataset.csrf}
-            initialError={container.dataset.error || ''}
-            initialUsername={container.dataset.username || ''}
-        />
-    );
-}

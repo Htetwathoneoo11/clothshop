@@ -17,6 +17,7 @@ class UserController extends Controller{
             'email' => 'required|email|unique:users,email',
             'password' => 'required',
         ]);
+        $data['password'] = Hash::make($data['password']);
         $user = User::create($data);
         Auth::login($user);
         return redirect()->route('dashboard')->with('success', 'Your account has been created successfully.');

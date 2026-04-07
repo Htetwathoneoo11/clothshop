@@ -1,20 +1,19 @@
 <?php
-
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CheckoutController;
 use Illuminate\Support\Facades\Route;
-
 use App\Http\Controllers\Controller;
 use App\Http\Controllers\ProductController;
-Route::get('/', [Controller::class, 'showDashboard'])->name('dashboard');
-Route::get('/clothshop', [Controller::class, 'showDashboard'])->name('dashboard');
-Route::get('/dashboard', [Controller::class, 'showDashboard'])->name('users.dashboard');
-Route::get('/products/{product}', [ProductController::class, 'show'])->name('products.show');
+
+Route::view('/{any?}', 'spa')->where('any', '.*');
+Route::view('/', 'spa')->name('dashboard');
+Route::view('/clothshop', 'spa')->name('dashboard');
+Route::view('/dashboard', 'spa')->name('users.dashboard');
+Route::view('/products/{product}', 'spa')->name('products.show');
 
 use App\Http\Controllers\UserController;
 Route::get('/profile', [UserController::class, 'showProfile'])->name('users.profile');
-Route::get('/login', [UserController::class, 'showLogin'])->name('users.login');
-Route::post('/login', [UserController::class, 'login'])->name('users.login');
+Route::view('/login', 'spa')->name('users.login');
 Route::get('/register', [UserController::class, 'showRegister'])->name('users.register');
 Route::post('/register', [UserController::class, 'register'])->name('users.register');
 Route::get('/logout', [UserController::class, 'showLogout'])->name('users.logout');

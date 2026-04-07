@@ -6,9 +6,7 @@
     <title>@yield('title', 'My App')</title>
     <script src="https://cdn.tailwindcss.com"></script>
     @viteReactRefresh
-    @vite(['resources/css/app.css', 'resources/js/app.js', 'resources/js/Login.jsx', 'resources/js/Register.jsx'])
-    @vite(['resources/css/product.css', 'resources/js/product.js', 'resources/js/ProductFilter.jsx'])
-    @vite(['resources/css/login.css','resources/js/Login.jsx','resources/js/Logout.jsx', 'resources/js/Profile.jsx', 'resources/js/Register.jsx'])
+    @vite(['resources/css/app.css', 'resources/css/login.css', 'resources/css/product.css', 'resources/js/app.js'])
     @stack('styles')
 </head>
 <body class="flex flex-col min-h-screen">
