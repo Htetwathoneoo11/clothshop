@@ -7,12 +7,11 @@ export default defineConfig({
         laravel({
             input: ['resources/css/app.css', 
                     'resources/css/login.css', 
-                    'resources/css/product.css', 
-                    'resources/js/app.js',
+                    'resources/css/product.css',
                     'resources/js/spa/main.jsx',
             ],
             refresh: true,
         }),
-        react({ jsxRuntime: 'automatic' }),
+        react(),
     ],
 });

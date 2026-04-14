@@ -6,20 +6,32 @@ export default function Dashboard() {
     const [search, setSearch] = useState('');
     const [category, setCategory] = useState('');
     const [sort, setSort] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
 
     useEffect(() => {
         const params = new URLSearchParams();
         if (search) params.append('q', search);
         if (category) params.append('category', category);
         if (sort) params.append('sort', sort);
-
+        
+        setLoading(true);
+        setError('');
+    
         fetch(`/api/products?${params.toString()}`)
-            .then((res) => res.json())
+            .then((res) => {
+                if (!res.ok) throw new Error('Failed to load products');
+                return res.json();
+            })
             .then((data) => {
                 setProducts(data.products || []);
                 setCategories(data.categories || []);
-            });
+            })
+            .catch(() => setError('Failed to load products. Try again.'))
+            .finally(() => setLoading(false));
     }, [search, category, sort]);
+    
 
     return (
         <div className="page-container" id="product-dashboard">
@@ -73,24 +85,46 @@ export default function Dashboard() {
             <div className="product-view-panel">
                 {products.length === 0 ? (
                     <div className="product-dashboard-empty" role="status">
-                        <p className="product-dashboard-empty-title">No products found</p>
-                        <p className="product-dashboard-empty-hint">Try different filters.</p>
+                        {loading && <p>Loading products...</p>}
+                        {error && <p className="error-message">{error}</p>}
                     </div>
                 ) : (
                     <div className="products-cards-grid">
-                        {products.map((product) => (
-                            <article key={product.id} className="product-card-dashboard">
-                                <div className="product-card-dashboard-body">
-                                    <h2 className="product-card-dashboard-title">{product.name}</h2>
-                                    <p className="product-card-dashboard-meta">
-                                        {product.brand || 'Unbranded'} - {product.category}
-                                    </p>
-                                    <p className="product-card-dashboard-desc">
-                                        {product.description || ''}
-                                    </p>
-                                </div>
-                            </article>
-                        ))}
+                        {products.map((product) => {
+                            const variants = product.variants || [];
+                            const inStock = variants.filter(v => v.stock > 0);
+                            const minPrice = inStock.length > 0
+                                ? Math.min(...inStock.map(v => Number(v.price)))
+                                : null;
+
+                            return (
+                                <article key={product.id} className="product-card-dashboard">
+                                    <a href={`/products/${product.id}`} className="product-card-dashboard-media">
+                                        {product.image_url ? (
+                                            <img src={product.image_url} alt={product.name} className="product-card-dashboard-img" />
+                                        ) : (
+                                            <div className="product-card-dashboard-placeholder">No image</div>
+                                        )}
+                                    </a>
+                                    <div className="product-card-dashboard-body">
+                                        <h2 className="product-card-dashboard-title">
+                                            <a href={`/products/${product.id}`} className="product-link">{product.name}</a>
+                                        </h2>
+                                        <p className="product-card-dashboard-meta">
+                                            {product.brand || 'Unbranded'} - {product.category}
+                                        </p>
+                                        {minPrice !== null && (
+                                            <p className="product-card-dashboard-price">
+                                                ${minPrice.toFixed(2)}
+                                            </p>
+                                        )}
+                                        <p className="product-card-dashboard-desc">
+                                            {product.description ? product.description.slice(0, 120) : ''}
+                                        </p>
+                                    </div>
+                                </article>
+                            );
+                        })}
                     </div>
                 )}
             </div>

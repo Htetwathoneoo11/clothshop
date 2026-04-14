@@ -1,25 +1,22 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { createRoot } from 'react-dom/client';
+import React, { useState } from 'react';
+import axios from 'axios';
 import { Eye, EyeOff } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
-export default function LoginForm() {
-    const [username, setUsername] = useState(initialUsername || '');
+axios.defaults.withCredentials = true;
+
+export default function Login() {
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
-    const [error, setError] = useState(initialError || '');
+    const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const errorRef = useRef(null);
-
-    useEffect(() => {
-        if (error && errorRef.current) {
-            errorRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-    }, [error]);
+    const navigate = useNavigate();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
-    
+
         if (!username.trim()) {
             setError('Please enter your username.');
             return;
@@ -28,48 +25,34 @@ export default function LoginForm() {
             setError('Please enter your password.');
             return;
         }
-    
+
         setLoading(true);
-    
+
         try {
-            
-            await window.axios.get('/sanctum/csrf-cookie');
-    
-            const response = await window.axios.post('/api/auth/login', {
-                username,
-                password,
-            });
-    
-            if (response.status === 200) {
-                window.location.href = '/dashboard';
-            } else {
-                setError(response.data.message || 'Login failed.');
-            }
+            await axios.get('/sanctum/csrf-cookie');
+            await axios.post('/api/auth/login', { username, password });
+            navigate('/dashboard');
         } catch (err) {
-            setError('Network error. Please try again.');
+            setError('Login failed. Please check your credentials.');
         } finally {
             setLoading(false);
         }
     };
-    
+
     const hasError = Boolean(error);
 
     return (
         <div className="login-box">
             <h2>Sign in</h2>
             <form onSubmit={handleSubmit} noValidate>
-                <input type="hidden" name="_token" value={csrfToken} />
                 {hasError && (
                     <div
-                        ref={errorRef}
                         id="login-error-message"
                         className="error-message error-message-visible"
                         role="alert"
                         aria-live="polite"
                     >
-                        <span className="error-message-icon" aria-hidden="true">
-                            !
-                        </span>
+                        <span className="error-message-icon" aria-hidden="true">!</span>
                         <span className="error-message-text">{error}</span>
                     </div>
                 )}
@@ -81,10 +64,7 @@ export default function LoginForm() {
                         name="username"
                         placeholder="Enter username"
                         value={username}
-                        onChange={(e) => {
-                            setUsername(e.target.value);
-                            if (error) setError('');
-                        }}
+                        onChange={(e) => setUsername(e.target.value)}
                         autoComplete="username"
                         disabled={loading}
                         aria-invalid={hasError}
@@ -101,10 +81,7 @@ export default function LoginForm() {
                             name="password"
                             placeholder="Enter password"
                             value={password}
-                            onChange={(e) => {
-                                setPassword(e.target.value);
-                                if (error) setError('');
-                            }}
+                            onChange={(e) => setPassword(e.target.value)}
                             autoComplete="current-password"
                             disabled={loading}
                             aria-invalid={hasError}
@@ -125,13 +102,9 @@ export default function LoginForm() {
                     </div>
                 </div>
                 <button type="submit" className="login-submit" disabled={loading}>
-                    {loading ? 'Signing in…' : 'Login'}
+                    {loading ? 'Signing in...' : 'Login'}
                 </button>
-                <div className="login-footer">
-                    <a href={registerUrl}>Don&apos;t have an account? Register here</a>
-                </div>
             </form>
         </div>
     );
 }
-

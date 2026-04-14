@@ -5,7 +5,7 @@ import './product.js';
 document.addEventListener('DOMContentLoaded', () => {
     // Mount React forms only on relevant pages
     if (document.getElementById('login-root')) {
-        import('./Login.jsx');
+        import('./spa/Login.jsx');
     }
     if (document.getElementById('register-root')) {
         import('./Register.jsx');

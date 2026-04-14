@@ -1,45 +1,30 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Api;
 
+use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Order;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\View\View;
 
 class CheckoutController extends Controller
 {
-    public function index(Request $request): View|RedirectResponse
+    public function store(Request $request)
     {
         $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
         $items = $cart->items()->with('variant.product')->get();
 
         if ($items->isEmpty()) {
-            return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
-        }
-
-        $subtotal = $items->sum(fn (CartItem $item) => $item->quantity * $item->unit_price);
-
-        return view('checkout.index', compact('items', 'subtotal'));
-    }
-
-    public function store(Request $request): RedirectResponse
-    {
-        $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
-        $items = $cart->items()->with('variant.product')->get();
-
-        if ($items->isEmpty()) {
-            return redirect()->route('cart.index')->with('error', 'Your cart is empty.');
+            return response()->json(['message' => 'Your cart is empty.'], 409);
         }
 
         foreach ($items as $item) {
             if ($item->quantity > $item->variant->stock) {
-                return redirect()
-                    ->route('cart.index')
-                    ->with('error', "Insufficient stock for {$item->variant->product->name} ({$item->variant->color}/{$item->variant->size}).");
+                return response()->json([
+                    'message' => "Insufficient stock for {$item->variant->product->name} ({$item->variant->color}/{$item->variant->size}).",
+                ], 409);
             }
         }
 
@@ -69,6 +54,6 @@ class CheckoutController extends Controller
             $cart->items()->delete();
         });
 
-        return redirect()->route('users.dashboard')->with('success', 'Checkout successful.');
+        return response()->json(['message' => 'Checkout successful.']);
     }
 }

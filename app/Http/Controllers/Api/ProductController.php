@@ -44,5 +44,18 @@ class ProductController extends Controller
             'products' => $products,
             'categories' => $categories,
         ]);
-    }
+    }//index
+    public function show(Product $product)
+    {
+        if (! $product->is_active) {
+            return response()->json(['message' => 'Product not found'], 404);
+        }
+
+        $product->load(['variants' => fn ($query) => $query->orderBy('color')->orderBy('size')]);
+
+        return response()->json([
+            'product' => $product,
+        ]);
+    }//show
+
 }

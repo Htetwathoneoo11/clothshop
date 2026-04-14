@@ -46,5 +46,24 @@ class AuthController extends Controller
                 'updated_at' => $user->updated_at,
             ],
         ]);
-    }
+    }//login
+    public function me(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json(['user' => null], 401);
+        }
+
+        return response()->json([
+            'user' => [
+                'id' => $user->id,
+                'username' => $user->username,
+                'email' => $user->email,
+                'role' => $user->role,
+                'status' => $user->status,
+            ],
+        ]);
+    }//me
+
 }
