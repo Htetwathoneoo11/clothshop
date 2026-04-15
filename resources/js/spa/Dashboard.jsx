@@ -1,4 +1,20 @@
 import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+
+function ProductCardSkeleton() {
+    return (
+        <div className="product-card-skeleton" aria-hidden>
+            <div className="product-card-skeleton-media" />
+            <div className="product-card-skeleton-body">
+                <div className="product-card-skeleton-line product-card-skeleton-line--title" />
+                <div className="product-card-skeleton-line product-card-skeleton-line--meta" />
+                <div className="product-card-skeleton-line product-card-skeleton-line--price" />
+                <div className="product-card-skeleton-line" />
+                <div className="product-card-skeleton-line product-card-skeleton-line--short" />
+            </div>
+        </div>
+    );
+}
 
 export default function Dashboard() {
     const [products, setProducts] = useState([]);
@@ -9,16 +25,15 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
-
     useEffect(() => {
         const params = new URLSearchParams();
         if (search) params.append('q', search);
         if (category) params.append('category', category);
         if (sort) params.append('sort', sort);
-        
+
         setLoading(true);
         setError('');
-    
+
         fetch(`/api/products?${params.toString()}`)
             .then((res) => {
                 if (!res.ok) throw new Error('Failed to load products');
@@ -31,16 +46,33 @@ export default function Dashboard() {
             .catch(() => setError('Failed to load products. Try again.'))
             .finally(() => setLoading(false));
     }, [search, category, sort]);
-    
+
+    const showSkeleton = loading && products.length === 0;
+    const showEmpty = !loading && products.length === 0 && !error;
+    const showGrid = products.length > 0;
 
     return (
-        <div className="page-container" id="product-dashboard">
-            <div className="product-dashboard-actions">
-                <div className="product-filter-bar product-toolbar-form">
+        <div className="page-container page-container--dashboard" id="product-dashboard">
+            <section className="dashboard-hero" aria-labelledby="dashboard-hero-heading">
+                <div className="dashboard-hero-copy">
+                    <p className="dashboard-hero-eyebrow">New season</p>
+                    <h1 id="dashboard-hero-heading" className="dashboard-hero-title">
+                        Wardrobe essentials, curated for you
+                    </h1>
+                    <p className="dashboard-hero-sub">
+                        Browse tops, outerwear, and more. Filter by category, sort by price, or search the catalog.
+                    </p>
+                </div>
+                <div className="dashboard-hero-accent" aria-hidden />
+            </section>
+
+            <section className="dashboard-catalog" aria-label="Product catalog">
+                <div className="dashboard-catalog__toolbar product-toolbar-form">
                     <div className="product-filter-toolbar-cluster">
                         <div className="product-filter-group">
-                            <label className="product-filter-label">Category</label>
+                            <label className="product-filter-label" htmlFor="filter-category">Category</label>
                             <select
+                                id="filter-category"
                                 value={category}
                                 onChange={(e) => setCategory(e.target.value)}
                                 className="product-filter-select"
@@ -52,82 +84,104 @@ export default function Dashboard() {
                             </select>
                         </div>
                         <div className="product-filter-group">
-                            <label className="product-filter-label">Sort by:</label>
+                            <label className="product-filter-label" htmlFor="filter-sort">Sort</label>
                             <select
+                                id="filter-sort"
                                 value={sort}
                                 onChange={(e) => setSort(e.target.value)}
                                 className="product-filter-select"
                             >
-                                <option value="">Default</option>
-                                <option value="price_asc">Price low to high</option>
-                                <option value="price_desc">Price high to low</option>
+                                <option value="">Featured</option>
+                                <option value="price_asc">Price: low to high</option>
+                                <option value="price_desc">Price: high to low</option>
                             </select>
                         </div>
                     </div>
                     <div className="product-filter-group product-filter-group--search">
-                        <label className="product-filter-label">Search</label>
+                        <label className="product-filter-label" htmlFor="filter-search">Search</label>
                         <div className="product-search-wrap">
                             <input
+                                id="filter-search"
                                 type="search"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="product-filter-search-input"
-                                placeholder="Search products..."
+                                placeholder="Search by name, brand, or description…"
+                                autoComplete="off"
                             />
-                            <button type="button" className="product-search-btn">
-                                Search
-                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div className="product-view-panel">
-                {products.length === 0 ? (
-                    <div className="product-dashboard-empty" role="status">
-                        {loading && <p>Loading products...</p>}
-                        {error && <p className="error-message">{error}</p>}
-                    </div>
-                ) : (
-                    <div className="products-cards-grid">
-                        {products.map((product) => {
-                            const variants = product.variants || [];
-                            const inStock = variants.filter(v => v.stock > 0);
-                            const minPrice = inStock.length > 0
-                                ? Math.min(...inStock.map(v => Number(v.price)))
-                                : null;
+                <div className="dashboard-catalog__products product-view-panel">
+                    {error && (
+                        <div className="dashboard-state dashboard-state--error" role="alert">
+                            <p className="dashboard-state-title">Something went wrong</p>
+                            <p className="dashboard-state-text">{error}</p>
+                        </div>
+                    )}
 
-                            return (
-                                <article key={product.id} className="product-card-dashboard">
-                                    <a href={`/products/${product.id}`} className="product-card-dashboard-media">
-                                        {product.image_url ? (
-                                            <img src={product.image_url} alt={product.name} className="product-card-dashboard-img" />
-                                        ) : (
-                                            <div className="product-card-dashboard-placeholder">No image</div>
-                                        )}
-                                    </a>
-                                    <div className="product-card-dashboard-body">
-                                        <h2 className="product-card-dashboard-title">
-                                            <a href={`/products/${product.id}`} className="product-link">{product.name}</a>
-                                        </h2>
-                                        <p className="product-card-dashboard-meta">
-                                            {product.brand || 'Unbranded'} - {product.category}
-                                        </p>
-                                        {minPrice !== null && (
-                                            <p className="product-card-dashboard-price">
-                                                ${minPrice.toFixed(2)}
+                    {showSkeleton && (
+                        <div className="products-cards-grid products-cards-grid--skeleton">
+                            {Array.from({ length: 6 }).map((_, i) => (
+                                <ProductCardSkeleton key={i} />
+                            ))}
+                        </div>
+                    )}
+
+                    {showEmpty && (
+                        <div className="dashboard-state dashboard-state--empty" role="status">
+                            <p className="dashboard-state-title">No matches</p>
+                            <p className="dashboard-state-text">
+                                Try clearing filters or search keywords to see more products.
+                            </p>
+                        </div>
+                    )}
+
+                    {showGrid && (
+                        <div className="products-cards-grid">
+                            {products.map((product) => {
+                                const variants = product.variants || [];
+                                const inStock = variants.filter((v) => v.stock > 0);
+                                const minPrice = inStock.length > 0
+                                    ? Math.min(...inStock.map((v) => Number(v.price)))
+                                    : null;
+
+                                return (
+                                    <article key={product.id} className="product-card-dashboard">
+                                        <Link to={`/products/${product.id}`} className="product-card-dashboard-media">
+                                            {product.image_url ? (
+                                                <img src={product.image_url} alt="" className="product-card-dashboard-img" loading="lazy" />
+                                            ) : (
+                                                <div className="product-card-dashboard-placeholder">No image</div>
+                                            )}
+                                            {product.category ? (
+                                                <span className="product-card-dashboard-badge">{product.category}</span>
+                                            ) : null}
+                                        </Link>
+                                        <div className="product-card-dashboard-body">
+                                            <h2 className="product-card-dashboard-title">
+                                                <Link to={`/products/${product.id}`} className="product-link">{product.name}</Link>
+                                            </h2>
+                                            <p className="product-card-dashboard-meta">
+                                                {product.brand || 'Unbranded'}
                                             </p>
-                                        )}
-                                        <p className="product-card-dashboard-desc">
-                                            {product.description ? product.description.slice(0, 120) : ''}
-                                        </p>
-                                    </div>
-                                </article>
-                            );
-                        })}
-                    </div>
-                )}
-            </div>
+                                            {minPrice !== null && (
+                                                <p className="product-card-dashboard-price">
+                                                    From <span className="product-card-dashboard-price-value">${minPrice.toFixed(2)}</span>
+                                                </p>
+                                            )}
+                                            <p className="product-card-dashboard-desc">
+                                                {product.description ? `${product.description.slice(0, 110)}${product.description.length > 110 ? '…' : ''}` : ''}
+                                            </p>
+                                        </div>
+                                    </article>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
+            </section>
         </div>
     );
 }

@@ -13,7 +13,7 @@ export default function ProductDetail() {
     const [error, setError] = useState('');
     const [selectedColor, setSelectedColor] = useState('');
     const [selectedVariantId, setSelectedVariantId] = useState('');
-    const [loading, setLoading] = useState(false);
+    const [loadingAction, setLoadingAction] = useState('');
     const [message, setMessage] = useState('');
 
     useEffect(() => {
@@ -51,20 +51,26 @@ export default function ProductDetail() {
         }
     }, [selectedColor, sizeOptions]);
 
-    const handleAddToCart = async () => {
+    const addSelectedVariantToCart = async () => {
         if (!selectedVariantId) {
             setMessage('Please select a size.');
-            return;
+            return false;
         }
 
-        setLoading(true);
-        setMessage('');
+        await axios.get('/sanctum/csrf-cookie');
+        await axios.post('/api/cart', { variant_id: selectedVariantId, quantity: 1 });
+        refreshCartCount();
+        return true;
+    };
 
+    const handleAddToCart = async () => {
+        setLoadingAction('add');
+        setMessage('');
         try {
-            await axios.get('/sanctum/csrf-cookie');
-            await axios.post('/api/cart', { variant_id: selectedVariantId, quantity: 1 });
-            setMessage('Added to cart.');
-            refreshCartCount();
+            const added = await addSelectedVariantToCart();
+            if (added) {
+                setMessage('Added to cart.');
+            }
         } catch (err) {
             if (err.response?.status === 401) {
                 navigate('/login');
@@ -72,7 +78,26 @@ export default function ProductDetail() {
             }
             setMessage(err.response?.data?.message || 'Failed to add to cart.');
         } finally {
-            setLoading(false);
+            setLoadingAction('');
+        }
+    };
+
+    const handleBuyNow = async () => {
+        setLoadingAction('buy');
+        setMessage('');
+        try {
+            const added = await addSelectedVariantToCart();
+            if (added) {
+                navigate('/checkout');
+            }
+        } catch (err) {
+            if (err.response?.status === 401) {
+                navigate('/login');
+                return;
+            }
+            setMessage(err.response?.data?.message || 'Failed to continue to checkout.');
+        } finally {
+            setLoadingAction('');
         }
     };
 
@@ -134,13 +159,18 @@ export default function ProductDetail() {
                                     type="button"
                                     className="btn-primary product-detail-add"
                                     onClick={handleAddToCart}
-                                    disabled={loading}
+                                    disabled={loadingAction !== ''}
                                 >
-                                    {loading ? 'Adding...' : 'Add to cart'}
+                                    {loadingAction === 'add' ? 'Adding...' : 'Add to cart'}
                                 </button>
-                                <Link to="/checkout" className="btn-primary product-detail-buy-now">
-                                    Buy now
-                                </Link>
+                                <button
+                                    type="button"
+                                    className="btn-primary product-detail-buy-now"
+                                    onClick={handleBuyNow}
+                                    disabled={loadingAction !== ''}
+                                >
+                                    {loadingAction === 'buy' ? 'Going to checkout...' : 'Buy now'}
+                                </button>
                             </div>
 
                             {message && <p>{message}</p>}

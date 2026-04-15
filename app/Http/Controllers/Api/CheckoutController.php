@@ -4,55 +4,79 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Cart;
-use App\Models\CartItem;
 use App\Models\Order;
+use App\Models\ProductVariant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use RuntimeException;
 
 class CheckoutController extends Controller
 {
     public function store(Request $request)
     {
-        $cart = Cart::firstOrCreate(['user_id' => $request->user()->id]);
-        $items = $cart->items()->with('variant.product')->get();
+        $userId = $request->user()->id;
 
-        if ($items->isEmpty()) {
-            return response()->json(['message' => 'Your cart is empty.'], 409);
-        }
+        try {
+            DB::transaction(function () use ($userId): void {
+                $cart = Cart::firstOrCreate(['user_id' => $userId]);
+                $items = $cart->items()->with('variant.product')->lockForUpdate()->get();
 
-        foreach ($items as $item) {
-            if ($item->quantity > $item->variant->stock) {
-                return response()->json([
-                    'message' => "Insufficient stock for {$item->variant->product->name} ({$item->variant->color}/{$item->variant->size}).",
-                ], 409);
-            }
-        }
+                if ($items->isEmpty()) {
+                    throw new RuntimeException('Your cart is empty.');
+                }
 
-        DB::transaction(function () use ($items, $cart, $request): void {
-            $total = 0;
-            $order = Order::create([
-                'user_id' => $request->user()->id,
-                'total_amount' => 0,
-                'status' => 'paid',
-            ]);
+                $variantIds = $items->pluck('product_variant_id')->unique()->values();
+                $variants = ProductVariant::whereIn('id', $variantIds)
+                    ->lockForUpdate()
+                    ->get()
+                    ->keyBy('id');
 
-            foreach ($items as $item) {
-                $lineTotal = $item->quantity * $item->unit_price;
-                $total += $lineTotal;
+                foreach ($items as $item) {
+                    $variant = $variants->get($item->product_variant_id);
+                    if (! $variant || $item->quantity > $variant->stock) {
+                        $name = $item->variant->product->name ?? 'this product';
+                        $color = $item->variant->color ?? '-';
+                        $size = $item->variant->size ?? '-';
+                        throw new RuntimeException("Insufficient stock for {$name} ({$color}/{$size}).");
+                    }
+                }
 
-                $order->items()->create([
-                    'product_variant_id' => $item->product_variant_id,
-                    'quantity' => $item->quantity,
-                    'unit_price' => $item->unit_price,
-                    'line_total' => $lineTotal,
+                $total = 0;
+                $order = Order::create([
+                    'user_id' => $userId,
+                    'total_amount' => 0,
+                    'status' => Order::STATUS_PAID,
                 ]);
 
-                $item->variant->decrement('stock', $item->quantity);
-            }
+                foreach ($items as $item) {
+                    $lineTotal = round($item->quantity * (float) $item->unit_price, 2);
+                    $total += $lineTotal;
 
-            $order->update(['total_amount' => $total]);
-            $cart->items()->delete();
-        });
+                    $order->items()->create([
+                        'product_variant_id' => $item->product_variant_id,
+                        'quantity' => $item->quantity,
+                        'unit_price' => $item->unit_price,
+                        'line_total' => $lineTotal,
+                    ]);
+
+                    $affected = ProductVariant::whereKey($item->product_variant_id)
+                        ->where('stock', '>=', $item->quantity)
+                        ->decrement('stock', $item->quantity);
+
+                    if ($affected === 0) {
+                        $name = $item->variant->product->name ?? 'this product';
+                        $color = $item->variant->color ?? '-';
+                        $size = $item->variant->size ?? '-';
+                        throw new RuntimeException("Insufficient stock for {$name} ({$color}/{$size}).");
+                    }
+                }
+
+                $order->update(['total_amount' => round($total, 2)]);
+                $cart->items()->delete();
+            }, 3);
+        } catch (RuntimeException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 409);
+        }
 
         return response()->json(['message' => 'Checkout successful.']);
     }

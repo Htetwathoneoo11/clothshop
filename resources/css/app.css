@@ -1,61 +1,195 @@
-/* Dashboard layout and navbar */
-body {
-    margin: 0;
-    font-family: Arial, sans-serif;
-    background: linear-gradient(135deg, #f5f7fa, #e4ecf7);
+/* Clothshop — layout, tokens, navbar */
+:root {
+    --color-bg: #f4f2ef;
+    --color-bg-accent: #e8e4df;
+    --color-ink: #1c1917;
+    --color-ink-muted: #57534e;
+    --color-surface: #ffffff;
+    --color-border: rgba(28, 25, 23, 0.08);
+    --color-accent: #c2410c;
+    --color-accent-soft: rgba(194, 65, 12, 0.12);
+    --font-sans: "DM Sans", system-ui, -apple-system, sans-serif;
+    --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+    --radius-lg: 16px;
+    --shadow-nav: 0 1px 0 rgba(255, 255, 255, 0.06), 0 12px 40px rgba(0, 0, 0, 0.35);
 }
 
-/* Hide scrollbars (vertical & horizontal) while keeping scroll */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    -webkit-text-size-adjust: 100%;
+}
+
 body {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;     /* Firefox */
+    margin: 0;
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.5;
+    color: var(--color-ink);
+    background-color: var(--color-bg);
+    background-image:
+        radial-gradient(1200px 600px at 10% -10%, rgba(194, 65, 12, 0.07), transparent 55%),
+        radial-gradient(900px 480px at 100% 0%, rgba(59, 130, 246, 0.06), transparent 50%),
+        linear-gradient(180deg, var(--color-bg) 0%, var(--color-bg-accent) 100%);
+    min-height: 100vh;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
 }
 
 body::-webkit-scrollbar {
-    display: none;             /* Chrome, Safari, Opera */
+    display: none;
+}
+
+#app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-main {
+    flex: 1;
+    width: 100%;
+    max-width: 1220px;
+    margin: 0 auto;
+    padding: 10px 20px 56px;
+}
+
+@media (min-width: 768px) {
+    .app-main {
+        padding: 10px 28px 64px;
+    }
 }
 
 .navbar {
     position: sticky;
     top: 0;
-    z-index: 40;
-    background-color: #1f2933;
-    color: #fff;
-    padding: 12px 24px;
+    z-index: 50;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    gap: 16px;
+    padding: 10px 20px;
+    color: #fafaf9;
+    background: linear-gradient(165deg, #1c1917 0%, #292524 48%, #1c1917 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: var(--shadow-nav);
+}
+
+@media (min-width: 768px) {
+    .navbar {
+        padding: 12px 28px;
+    }
 }
 
 .navbar-brand {
-    font-size: 20px;
-    font-weight: bold;
+    min-width: 0;
+}
+
+.navbar-brand-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 10px;
+    padding: 4px 8px 4px 4px;
+    margin: -4px -8px -4px -4px;
+    transition: background-color 0.18s ease;
+}
+
+.navbar-brand-link:hover {
+    background-color: rgba(255, 255, 255, 0.06);
+}
+
+.navbar-brand-logo {
+    width: 40px;
+    height: 40px;
+    max-width: 40px;
+    max-height: 40px;
+    object-fit: contain;
+    flex-shrink: 0;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.navbar-brand-text {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 1.2rem;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
 }
 
 .nav-links {
     display: flex;
-    gap: 18px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
 }
 
 .nav-link {
-    color: #e5e7eb;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #d6d3d1;
     text-decoration: none;
-    font-size: 14px;
-    font-weight: 500;
-    padding-bottom: 2px;
-    border-bottom: 2px solid transparent;
-    transition: color 0.15s ease, border-color 0.15s ease;
+    border: 1px solid transparent;
+    transition: color 0.18s ease, background-color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
 }
 
 .nav-link:hover {
-    color: #ffffff;
-    border-color: #3b82f6;
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.08);
 }
 
 .nav-link-active {
-    color: #ffffff;
-    border-color: #3b82f6;
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+.nav-link--cta {
+    background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%);
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(194, 65, 12, 0.45);
+}
+
+.nav-link--cta:hover {
+    color: #fff;
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    transform: translateY(-1px);
+}
+
+.nav-link--cta.nav-link-active {
+    border-color: rgba(255, 255, 255, 0.25);
+}
+
+.nav-cart-badge {
+    min-width: 1.25rem;
+    height: 1.25rem;
+    padding: 0 5px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    line-height: 1;
+    color: #1c1917;
+    background: #fef3c7;
+    border-radius: 999px;
+}
+
+.nav-link--cart.nav-link-active .nav-cart-badge {
+    background: #fff;
 }
 
 .nav-dashboard-search {
