@@ -28,6 +28,15 @@ class Order extends Model
         'user_id',
         'total_amount',
         'status',
+        'name',
+        'phone_number',
+        'delivery_date',
+        'delivery_time',
+        'building_or_flat',
+        'street_or_road',
+        'township',
+        'city',
+        'payment_method',
     ];
 
     protected $casts = [

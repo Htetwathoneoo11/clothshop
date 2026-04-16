@@ -42,7 +42,7 @@ class AuthController extends Controller
         $this->updateLoginMeta($request, $user);
 
         return response()->json([
-            'user' => $this->userPayload($user->fresh()),
+            'user' => $user->fresh()->toApiArray(),
         ]);
     }//login
 
@@ -70,7 +70,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'Registration successful.',
-            'user' => $this->userPayload($user->fresh()),
+            'user' => $user->fresh()->toApiArray(),
         ], 201);
     }
 
@@ -83,7 +83,7 @@ class AuthController extends Controller
         }
 
         return response()->json([
-            'user' => $this->userPayload($user),
+            'user' => $user->toApiArray(),
         ]);
     }//me
 
@@ -107,19 +107,4 @@ class AuthController extends Controller
         ])->save();
     }
 
-    private function userPayload(User $user): array
-    {
-        return [
-            'id' => $user->id,
-            'username' => $user->username,
-            'email' => $user->email,
-            'role' => $user->role,
-            'status' => $user->status,
-            'last_login_at' => $user->last_login_at,
-            'last_login_ip' => $user->last_login_ip,
-            'user_agent' => $user->user_agent,
-            'created_at' => $user->created_at,
-            'updated_at' => $user->updated_at,
-        ];
-    }
 }

@@ -14,10 +14,22 @@ class CheckoutController extends Controller
 {
     public function store(Request $request)
     {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'phone_number' => ['required', 'string', 'max:50'],
+            'delivery_date' => ['required', 'date'],
+            'delivery_time' => ['required', 'date_format:H:i'],
+            'building_or_flat' => ['required', 'string', 'max:255'],
+            'street_or_road' => ['required', 'string', 'max:255'],
+            'township' => ['required', 'string', 'max:255'],
+            'city' => ['required', 'string', 'max:255'],
+            'payment_method' => ['required', 'in:cash_on_delivery,card_on_delivery'],
+        ]);
+
         $userId = $request->user()->id;
 
         try {
-            DB::transaction(function () use ($userId): void {
+            DB::transaction(function () use ($userId, $validated): void {
                 $cart = Cart::firstOrCreate(['user_id' => $userId]);
                 $items = $cart->items()->with('variant.product')->lockForUpdate()->get();
 
@@ -46,6 +58,15 @@ class CheckoutController extends Controller
                     'user_id' => $userId,
                     'total_amount' => 0,
                     'status' => Order::STATUS_PAID,
+                    'name' => $validated['name'],
+                    'phone_number' => $validated['phone_number'],
+                    'delivery_date' => $validated['delivery_date'],
+                    'delivery_time' => $validated['delivery_time'],
+                    'building_or_flat' => $validated['building_or_flat'],
+                    'street_or_road' => $validated['street_or_road'],
+                    'township' => $validated['township'],
+                    'city' => $validated['city'],
+                    'payment_method' => $validated['payment_method'],
                 ]);
 
                 foreach ($items as $item) {

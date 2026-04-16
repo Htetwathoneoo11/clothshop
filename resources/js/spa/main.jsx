@@ -5,6 +5,7 @@ import axios from 'axios';
 axios.defaults.withCredentials = true;
 import Dashboard from './Dashboard.jsx';
 import Login from './users/Login.jsx';
+import Profile from './users/Profile.jsx';
 import Navbar from './Navbar.jsx';
 import Cart from './cart/Cart.jsx';
 import { CartProvider } from './cart/CartContext.jsx';
@@ -23,6 +24,7 @@ root.render(
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/products/:id" element={<ProductDetail />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/profile" element={<Profile />} />
                     <Route path="/cart" element={<Cart />} />
                     <Route path="/checkout" element={<Checkout />} />
                 </Routes>

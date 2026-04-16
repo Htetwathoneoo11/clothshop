@@ -6,6 +6,8 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CheckoutController;
+use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\ProfileController;
 
 // Public auth + catalog
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -17,7 +19,11 @@ Route::get('/products/{product}', [ProductController::class, 'show']);
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/me', [AuthController::class, 'me']);
+    Route::post('/me/avatar', [ProfileController::class, 'updateAvatar']);
+    Route::delete('/me/avatar', [ProfileController::class, 'destroyAvatar']);
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+
+    Route::get('/orders', [OrderController::class, 'index']);
 
     Route::get('/cart', [CartController::class, 'index']);
     Route::post('/cart', [CartController::class, 'store']);
