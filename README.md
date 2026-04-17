@@ -30,6 +30,27 @@ It is built as a Laravel backend API with a React single-page frontend.
 - `resources/views/spa.blade.php`: SPA entry view
 - `tests/Feature`: API and auth feature tests
 
+## Footer Information Block
+
+The SPA includes a global footer shown across pages with the following content groups:
+
+- **Brand**: Clothshop + short brand message
+- **Shop**: links to Shop, Cart, Checkout, and Profile
+- **Help**: links to Contact, Shipping & Delivery, Returns, and FAQ pages
+- **Legal**: links to Privacy Policy and Terms of Service pages
+- **Follow**: external links to Instagram, Facebook, and TikTok
+- **Trust**: secure checkout note
+- **Copyright**: `© 2026 Clothshop. All rights reserved.`
+
+Footer-linked internal pages are routed in the SPA as:
+
+- `/contact`
+- `/shipping-delivery`
+- `/returns`
+- `/faq`
+- `/privacy-policy`
+- `/terms-of-service`
+
 ## Main API Endpoints
 
 Public:

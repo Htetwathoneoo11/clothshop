@@ -8,10 +8,19 @@ import Login from './users/Login.jsx';
 import Register from './users/Register.jsx';
 import Profile from './users/Profile.jsx';
 import Navbar from './Navbar.jsx';
+import Footer from './Footer.jsx';
 import Cart from './cart/Cart.jsx';
 import { CartProvider } from './cart/CartContext.jsx';
 import Checkout from './checkout/Checkout.jsx';
 import ProductDetail from './products/ProductDetail.jsx';
+import {
+    ContactPage,
+    ShippingPage,
+    ReturnsPage,
+    FaqPage,
+    PrivacyPolicyPage,
+    TermsPage,
+} from './info/InfoPages.jsx';
 
 const root = createRoot(document.getElementById('app'));
 
@@ -29,8 +38,15 @@ root.render(
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/cart" element={<Cart />} />
                     <Route path="/checkout" element={<Checkout />} />
+                    <Route path="/contact" element={<ContactPage />} />
+                    <Route path="/shipping-delivery" element={<ShippingPage />} />
+                    <Route path="/returns" element={<ReturnsPage />} />
+                    <Route path="/faq" element={<FaqPage />} />
+                    <Route path="/privacy-policy" element={<PrivacyPolicyPage />} />
+                    <Route path="/terms-of-service" element={<TermsPage />} />
                 </Routes>
             </main>
+            <Footer />
         </CartProvider>
     </BrowserRouter>
 );
