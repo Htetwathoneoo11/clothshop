@@ -142,7 +142,7 @@ export default function Login() {
                     <div className="login-footer login-footer--stack">
                         <p className="login-footer-line">
                             <span className="login-footer-muted">New here? </span>
-                            <a href="/register">Create an account</a>
+                            <Link to="/register">Create an account</Link>
                         </p>
                         <p className="login-back-link">
                             <Link to="/dashboard">← Continue shopping</Link>

@@ -89,7 +89,7 @@ class ApiCommerceTest extends TestCase
             'unit_price' => '19.99',
         ]);
 
-        $response = $this->actingAs($user)->postJson('/api/checkout');
+        $response = $this->actingAs($user)->postJson('/api/checkout', $this->checkoutPayload());
 
         $response->assertStatus(409);
         $this->assertStringContainsString('Insufficient stock', $response->json('message', ''));
@@ -118,7 +118,7 @@ class ApiCommerceTest extends TestCase
             'unit_price' => '19.99',
         ]);
 
-        $response = $this->actingAs($user)->postJson('/api/checkout');
+        $response = $this->actingAs($user)->postJson('/api/checkout', $this->checkoutPayload());
         $response->assertOk()->assertJsonPath('message', 'Checkout successful.');
 
         $order = Order::query()->where('user_id', $user->id)->latest('id')->first();
@@ -174,5 +174,20 @@ class ApiCommerceTest extends TestCase
             'stock' => $stock,
             'sku' => 'TEST-' . $stock . '-' . uniqid(),
         ]);
+    }
+
+    private function checkoutPayload(): array
+    {
+        return [
+            'name' => 'Test Customer',
+            'phone_number' => '5551234567',
+            'delivery_date' => now()->addDay()->toDateString(),
+            'delivery_time' => '13:00',
+            'building_or_flat' => 'A-101',
+            'street_or_road' => 'Main Street',
+            'township' => 'Central',
+            'city' => 'Springfield',
+            'payment_method' => 'cash_on_delivery',
+        ];
     }
 }

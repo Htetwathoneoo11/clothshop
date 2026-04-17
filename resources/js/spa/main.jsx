@@ -5,6 +5,7 @@ import axios from 'axios';
 axios.defaults.withCredentials = true;
 import Dashboard from './Dashboard.jsx';
 import Login from './users/Login.jsx';
+import Register from './users/Register.jsx';
 import Profile from './users/Profile.jsx';
 import Navbar from './Navbar.jsx';
 import Cart from './cart/Cart.jsx';
@@ -15,7 +16,7 @@ import ProductDetail from './products/ProductDetail.jsx';
 const root = createRoot(document.getElementById('app'));
 
 root.render(
-    <BrowserRouter>
+    <BrowserRouter basename="/clothshop">
         <CartProvider>
             <Navbar />
             <main className="app-main">
@@ -24,6 +25,7 @@ root.render(
                     <Route path="/dashboard" element={<Dashboard />} />
                     <Route path="/products/:id" element={<ProductDetail />} />
                     <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/cart" element={<Cart />} />
                     <Route path="/checkout" element={<Checkout />} />
