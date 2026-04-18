@@ -30,6 +30,8 @@ class OrderController extends Controller
         return [
             'id' => $order->id,
             'total_amount' => (string) $order->total_amount,
+            'total_amount_mmk' => (int) $order->total_amount_mmk,
+            'currency_code' => 'MMK',
             'status' => $order->status,
             'created_at' => $order->created_at?->toIso8601String(),
             'delivery' => [
@@ -51,6 +53,8 @@ class OrderController extends Controller
                     'quantity' => $item->quantity,
                     'unit_price' => (string) $item->unit_price,
                     'line_total' => (string) $item->line_total,
+                    'unit_price_mmk' => (int) $item->unit_price_mmk,
+                    'line_total_mmk' => (int) $item->line_total_mmk,
                     'product_name' => $product?->name ?? 'Product',
                     'color' => $variant?->color,
                     'size' => $variant?->size,

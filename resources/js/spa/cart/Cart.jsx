@@ -4,15 +4,14 @@ axios.defaults.withCredentials = true;
 import { Link } from 'react-router-dom';
 import { Minus, Plus, ShoppingBag, Trash2, CreditCard, ArrowRight } from 'lucide-react';
 import { useCart } from './CartContext.jsx';
+import { formatMMK, toIntegerMMK } from '../utils/money.js';
 
 export default function Cart() {
     const [items, setItems] = useState([]);
-    const [subtotal, setSubtotal] = useState(0);
+    const [subtotalMmk, setSubtotalMmk] = useState(0);
     const [loading, setLoading] = useState(true);
     const [updatingId, setUpdatingId] = useState(null);
     const { refreshCartCount } = useCart();
-
-    const formatMoney = (amount) => `$${Number(amount || 0).toFixed(2)}`;
 
     const loadCart = () => {
         setLoading(true);
@@ -20,7 +19,7 @@ export default function Cart() {
             .get('/api/cart')
             .then((res) => {
                 setItems(res.data.items || []);
-                setSubtotal(res.data.subtotal || 0);
+                setSubtotalMmk(toIntegerMMK(res.data.subtotal_mmk));
                 refreshCartCount();
             })
             .finally(() => setLoading(false));
@@ -124,9 +123,9 @@ export default function Cart() {
                                             </button>
                                         </div>
                                         <p className="cart-item-price">
-                                            {formatMoney(item.unit_price)} each
+                                            {formatMMK(item.unit_price_mmk)} each
                                             <span className="cart-item-line-total">
-                                                {formatMoney(item.quantity * Number(item.unit_price))}
+                                                {formatMMK(toIntegerMMK(item.quantity) * toIntegerMMK(item.unit_price_mmk))}
                                             </span>
                                         </p>
                                         <button
@@ -152,7 +151,7 @@ export default function Cart() {
                         </div>
                         <div className="cart-summary-row">
                             <span>Subtotal</span>
-                            <strong>{formatMoney(subtotal)}</strong>
+                            <strong>{formatMMK(subtotalMmk)}</strong>
                         </div>
                         <Link to="/checkout" className="cart-checkout-btn">
                             <CreditCard size={16} aria-hidden="true" />

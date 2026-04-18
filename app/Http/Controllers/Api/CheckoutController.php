@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Models\ProductVariant;
+use App\Services\CreditScoreService;
+use App\Support\MmkMoney;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -53,10 +55,11 @@ class CheckoutController extends Controller
                     }
                 }
 
-                $total = 0;
+                $totalMmk = 0;
                 $order = Order::create([
                     'user_id' => $userId,
-                    'total_amount' => 0,
+                    'total_amount' => '0.00',
+                    'total_amount_mmk' => 0,
                     'status' => Order::STATUS_PAID,
                     'name' => $validated['name'],
                     'phone_number' => $validated['phone_number'],
@@ -70,14 +73,17 @@ class CheckoutController extends Controller
                 ]);
 
                 foreach ($items as $item) {
-                    $lineTotal = round($item->quantity * (float) $item->unit_price, 2);
-                    $total += $lineTotal;
+                    $unitMmk = (int) $item->unit_price_mmk;
+                    $lineTotalMmk = MmkMoney::lineTotalMmk((int) $item->quantity, $unitMmk);
+                    $totalMmk += $lineTotalMmk;
 
                     $order->items()->create([
                         'product_variant_id' => $item->product_variant_id,
                         'quantity' => $item->quantity,
-                        'unit_price' => $item->unit_price,
-                        'line_total' => $lineTotal,
+                        'unit_price' => MmkMoney::mmkToUsdDecimalString($unitMmk),
+                        'line_total' => MmkMoney::mmkToUsdDecimalString($lineTotalMmk),
+                        'unit_price_mmk' => $unitMmk,
+                        'line_total_mmk' => $lineTotalMmk,
                     ]);
 
                     $affected = ProductVariant::whereKey($item->product_variant_id)
@@ -92,13 +98,21 @@ class CheckoutController extends Controller
                     }
                 }
 
-                $order->update(['total_amount' => round($total, 2)]);
+                $order->update([
+                    'total_amount' => MmkMoney::mmkToUsdDecimalString($totalMmk),
+                    'total_amount_mmk' => $totalMmk,
+                ]);
+                $order->refresh();
+                app(CreditScoreService::class)->awardForPaidOrder($order);
                 $cart->items()->delete();
             }, 3);
         } catch (RuntimeException $exception) {
             return response()->json(['message' => $exception->getMessage()], 409);
         }
 
-        return response()->json(['message' => 'Checkout successful.']);
+        return response()->json([
+            'message' => 'Checkout successful.',
+            'currency_code' => 'MMK',
+        ]);
     }
 }

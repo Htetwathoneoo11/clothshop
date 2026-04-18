@@ -16,9 +16,9 @@ class ProductController extends Controller
 
         $products = Product::query()
             ->with(['variants' => fn ($query) => $query->orderBy('color')->orderBy('size')])
-            ->withMin(['variants as variants_min_price' => function ($q) {
+            ->withMin(['variants as variants_min_price_mmk' => function ($q) {
                 $q->where('stock', '>', 0);
-            }], 'price')
+            }], 'price_mmk')
             ->where('is_active', true)
             ->when($search !== '', function ($query) use ($search) {
                 $query->where(function ($subQuery) use ($search) {
@@ -28,8 +28,8 @@ class ProductController extends Controller
                 });
             })
             ->when($category !== '', fn ($query) => $query->where('category', $category))
-            ->when($sort === 'price_asc', fn ($query) => $query->orderBy('variants_min_price')->orderBy('name'))
-            ->when($sort === 'price_desc', fn ($query) => $query->orderByDesc('variants_min_price')->orderBy('name'))
+            ->when($sort === 'price_asc', fn ($query) => $query->orderBy('variants_min_price_mmk')->orderBy('name'))
+            ->when($sort === 'price_desc', fn ($query) => $query->orderByDesc('variants_min_price_mmk')->orderBy('name'))
             ->when(! in_array($sort, ['price_asc', 'price_desc'], true), fn ($query) => $query->orderBy('name'))
             ->get();
 

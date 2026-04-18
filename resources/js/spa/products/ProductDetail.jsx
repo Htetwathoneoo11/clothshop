@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 axios.defaults.withCredentials = true;
 import { useCart } from '../cart/CartContext.jsx';
+import { formatMMK } from '../utils/money.js';
 
 export default function ProductDetail() {
     const { id } = useParams();
@@ -148,7 +149,7 @@ export default function ProductDetail() {
                                 >
                                     {sizeOptions.map((v) => (
                                         <option key={v.id} value={v.id}>
-                                            {v.size} - ${Number(v.price).toFixed(2)} ({v.stock} in stock)
+                                            {v.size} - {formatMMK(v.price_mmk)} ({v.stock} in stock)
                                         </option>
                                     ))}
                                 </select>

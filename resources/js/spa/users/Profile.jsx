@@ -11,13 +11,18 @@ import {
     CreditCard,
     ChevronRight,
     Loader2,
-    Sparkles,
     Camera,
     Trash2,
     Package,
+    X,
 } from 'lucide-react';
 
+import { formatMMK } from '../utils/money.js';
+
 axios.defaults.withCredentials = true;
+
+/** Matches SVG arc: M 12 56 A 44 44 0 0 0 108 56 */
+const CREDIT_ARC_LEN = 44 * Math.PI;
 
 function formatDateTime(iso) {
     if (!iso) return '—';
@@ -28,12 +33,6 @@ function formatDateTime(iso) {
     } catch {
         return '—';
     }
-}
-
-function formatMoney(amount) {
-    const n = parseFloat(amount);
-    if (Number.isNaN(n)) return amount;
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(n);
 }
 
 function orderStatusLabel(status) {
@@ -58,6 +57,7 @@ function initialsFromUser(user) {
 
 function roleLabel(role) {
     if (role === 1) return 'Member';
+    if (role === 2) return 'Shopkeeper';
     return `Role ${role}`;
 }
 
@@ -73,7 +73,12 @@ export default function Profile() {
     const [avatarBusy, setAvatarBusy] = useState(false);
     const [avatarError, setAvatarError] = useState('');
     const [imgBroken, setImgBroken] = useState(false);
+    const [applyBusy, setApplyBusy] = useState(false);
+    const [applyMessage, setApplyMessage] = useState('');
+    const [applyError, setApplyError] = useState('');
+    const [creditOpen, setCreditOpen] = useState(false);
     const fileRef = useRef(null);
+    const creditCloseRef = useRef(null);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -85,6 +90,8 @@ export default function Profile() {
                     return;
                 }
                 setUser(res.data.user);
+                setApplyMessage('');
+                setApplyError('');
             })
             .catch((err) => {
                 if (err.response?.status === 401) {
@@ -93,6 +100,29 @@ export default function Profile() {
             })
             .finally(() => setLoading(false));
     }, [navigate]);
+
+    const handleApplyShopkeeper = async () => {
+        setApplyBusy(true);
+        setApplyMessage('');
+        setApplyError('');
+        try {
+            await axios.get('/sanctum/csrf-cookie');
+            const res = await axios.post('/api/shopkeeper/apply');
+            setApplyMessage(res.data.message || 'Request completed.');
+            setUser(res.data.user);
+        } catch (err) {
+            const data = err.response?.data;
+            const msg =
+                (typeof data?.message === 'string' && data.message) ||
+                'Could not submit application. Please try again.';
+            setApplyError(msg);
+            if (data?.user) {
+                setUser(data.user);
+            }
+        } finally {
+            setApplyBusy(false);
+        }
+    };
 
     useEffect(() => {
         if (!user) return;
@@ -107,6 +137,34 @@ export default function Profile() {
     }, [user?.avatar_url]);
 
     const initials = useMemo(() => initialsFromUser(user), [user]);
+
+    const eligibility = user?.shopkeeper_eligibility || {};
+    const creditScore = Number(user?.credit_score ?? 0);
+    const shopkeeperThreshold = Number(eligibility.threshold ?? 0);
+    const remainingCredit = Number(eligibility.remaining_credit ?? 0);
+    const canApply =
+        !user?.is_shopkeeper &&
+        eligibility.eligible === true;
+    const progressPct =
+        shopkeeperThreshold > 0
+            ? Math.min(100, Math.round((creditScore / shopkeeperThreshold) * 100))
+            : 0;
+
+    const meterDisplayPct = user?.is_shopkeeper ? 100 : progressPct;
+    const meterVisualPct = user?.is_shopkeeper ? 100 : Math.max(6, progressPct);
+
+    useEffect(() => {
+        if (!creditOpen) return undefined;
+        const onKey = (e) => {
+            if (e.key === 'Escape') setCreditOpen(false);
+        };
+        document.addEventListener('keydown', onKey);
+        const t = window.setTimeout(() => creditCloseRef.current?.focus(), 0);
+        return () => {
+            document.removeEventListener('keydown', onKey);
+            window.clearTimeout(t);
+        };
+    }, [creditOpen]);
 
     const handleLogout = async () => {
         setLogoutBusy(true);
@@ -178,19 +236,62 @@ export default function Profile() {
             <section className="profile-hero" aria-labelledby="profile-hero-heading">
                 <div className="profile-hero-bg" aria-hidden="true" />
                 <div className="profile-hero-inner">
-                    <div className={`profile-avatar ${showPhoto ? 'profile-avatar--photo' : ''}`} aria-hidden="true">
-                        {showPhoto ? (
-                            <img
-                                src={user.avatar_url}
-                                alt=""
-                                className="profile-avatar-img"
-                                onError={() => setImgBroken(true)}
+                    <div className="profile-hero-main-row">
+                        <div className="profile-avatar-wrap">
+                            <input
+                                ref={fileRef}
+                                type="file"
+                                accept="image/*"
+                                className="profile-photo-input"
+                                onChange={handleAvatarChange}
+                                disabled={avatarBusy}
+                                aria-label="Choose profile photo"
                             />
-                        ) : (
-                            <span className="profile-avatar-text">{initials}</span>
-                        )}
-                    </div>
-                    <div className="profile-hero-text">
+                            <button
+                                type="button"
+                                className={`profile-avatar ${showPhoto ? 'profile-avatar--photo' : ''} profile-avatar--interactive`}
+                                onClick={handleAvatarPick}
+                                disabled={avatarBusy}
+                                aria-label={showPhoto ? 'Change profile photo' : 'Add profile photo'}
+                            >
+                                {avatarBusy ? (
+                                    <Loader2
+                                        size={28}
+                                        className="profile-avatar-busy profile-sign-out-spinner"
+                                        aria-hidden="true"
+                                    />
+                                ) : showPhoto ? (
+                                    <img
+                                        src={user.avatar_url}
+                                        alt=""
+                                        className="profile-avatar-img"
+                                        onError={() => setImgBroken(true)}
+                                    />
+                                ) : (
+                                    <span className="profile-avatar-text">{initials}</span>
+                                )}
+                                {!avatarBusy ? (
+                                    <span className="profile-avatar-edit-hint" aria-hidden="true">
+                                        <Camera size={20} strokeWidth={2} />
+                                    </span>
+                                ) : null}
+                            </button>
+                            {showPhoto && !avatarBusy ? (
+                                <button
+                                    type="button"
+                                    className="profile-avatar-remove"
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleRemoveAvatar();
+                                    }}
+                                    disabled={avatarBusy}
+                                    aria-label="Remove profile photo"
+                                >
+                                    <Trash2 size={14} strokeWidth={2.2} aria-hidden="true" />
+                                </button>
+                            ) : null}
+                        </div>
+                        <div className="profile-hero-text">
                         <h2 id="profile-hero-heading" className="profile-display-name">
                             {user.username}
                         </h2>
@@ -206,49 +307,179 @@ export default function Profile() {
                                 {statusLabel(user.status)}
                             </span>
                         </div>
-                        <div className="profile-photo-actions">
-                            <input
-                                ref={fileRef}
-                                type="file"
-                                accept="image/*"
-                                className="profile-photo-input"
-                                onChange={handleAvatarChange}
-                                disabled={avatarBusy}
-                                aria-label="Choose profile photo"
-                            />
-                            <button
-                                type="button"
-                                className="profile-photo-btn"
-                                onClick={handleAvatarPick}
-                                disabled={avatarBusy}
-                            >
-                                {avatarBusy ? (
-                                    <Loader2 size={16} className="profile-sign-out-spinner" aria-hidden="true" />
-                                ) : (
-                                    <Camera size={16} aria-hidden="true" />
-                                )}
-                                {showPhoto ? 'Change photo' : 'Add photo'}
-                            </button>
-                            {showPhoto ? (
-                                <button
-                                    type="button"
-                                    className="profile-photo-btn profile-photo-btn--ghost"
-                                    onClick={handleRemoveAvatar}
-                                    disabled={avatarBusy}
-                                >
-                                    <Trash2 size={16} aria-hidden="true" />
-                                    Remove
-                                </button>
-                            ) : null}
-                        </div>
                         {avatarError ? (
                             <p className="profile-photo-error" role="alert">
                                 {avatarError}
                             </p>
                         ) : null}
+                        </div>
+
+                        <aside className="profile-credit-corner" aria-label="Shopkeeper credit">
+                            <div className="profile-credit-arc-wrap">
+                                <svg className="profile-credit-arc-svg" viewBox="0 0 120 64" aria-hidden="true">
+                                    <defs>
+                                        <linearGradient id="credit-arc-prog" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" stopColor="#f97316" />
+                                            <stop offset="50%" stopColor="#fb923c" />
+                                            <stop offset="100%" stopColor="#fdba74" />
+                                        </linearGradient>
+                                        <linearGradient id="credit-arc-prog-complete" x1="0%" y1="0%" x2="100%" y2="0%">
+                                            <stop offset="0%" stopColor="#22c55e" />
+                                            <stop offset="100%" stopColor="#86efac" />
+                                        </linearGradient>
+                                    </defs>
+                                    <path
+                                        d="M 12 56 A 44 44 0 0 0 108 56"
+                                        fill="none"
+                                        stroke="rgba(0,0,0,0.35)"
+                                        strokeWidth="11"
+                                        strokeLinecap="round"
+                                    />
+                                    <path
+                                        d="M 12 56 A 44 44 0 0 0 108 56"
+                                        fill="none"
+                                        stroke="rgba(255,255,255,0.38)"
+                                        strokeWidth="9"
+                                        strokeLinecap="round"
+                                    />
+                                    <path
+                                        d="M 12 56 A 44 44 0 0 0 108 56"
+                                        fill="none"
+                                        stroke={
+                                            user?.is_shopkeeper
+                                                ? 'url(#credit-arc-prog-complete)'
+                                                : 'url(#credit-arc-prog)'
+                                        }
+                                        strokeWidth="9"
+                                        strokeLinecap="round"
+                                        strokeDasharray={`${(meterVisualPct / 100) * CREDIT_ARC_LEN} ${CREDIT_ARC_LEN}`}
+                                        className={`profile-credit-arc-prog${
+                                            user?.is_shopkeeper ? ' profile-credit-arc-prog--complete' : ''
+                                        }`}
+                                    />
+                                </svg>
+                                <span className="profile-credit-arc-pct">{meterDisplayPct}%</span>
+                            </div>
+                            <button
+                                type="button"
+                                className="profile-credit-corner-btn"
+                                onClick={() => setCreditOpen(true)}
+                                aria-haspopup="dialog"
+                            >
+                                Credit
+                            </button>
+                        </aside>
                     </div>
+
+                    {applyMessage ? (
+                        <p className="profile-hero-credit-notice profile-hero-credit-notice--success" role="status">
+                            {applyMessage}
+                        </p>
+                    ) : null}
+                    {applyError ? (
+                        <p className="profile-hero-credit-notice profile-hero-credit-notice--error" role="alert">
+                            {applyError}
+                        </p>
+                    ) : null}
                 </div>
             </section>
+
+            {creditOpen ? (
+                <div className="profile-credit-modal-root">
+                    <div
+                        className="profile-credit-modal-backdrop"
+                        role="presentation"
+                        onClick={() => setCreditOpen(false)}
+                    />
+                    <div
+                        className="profile-credit-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="credit-modal-title"
+                    >
+                        <div className="profile-credit-modal-head">
+                            <h2 id="credit-modal-title" className="profile-credit-modal-title">
+                                Shopkeeper credit
+                            </h2>
+                            <button
+                                ref={creditCloseRef}
+                                type="button"
+                                className="profile-credit-modal-close"
+                                onClick={() => setCreditOpen(false)}
+                                aria-label="Close"
+                            >
+                                <X size={20} aria-hidden="true" />
+                            </button>
+                        </div>
+
+                        <p className="profile-credit-modal-lede">
+                            Your credit from completed orders counts toward the Shopkeeper threshold.
+                        </p>
+
+                        <dl className="profile-credit-modal-dl">
+                            <div className="profile-credit-modal-dl-row">
+                                <dt>Your credit</dt>
+                                <dd>{formatMMK(creditScore)}</dd>
+                            </div>
+                            <div className="profile-credit-modal-dl-row">
+                                <dt>Threshold</dt>
+                                <dd>{formatMMK(shopkeeperThreshold)}</dd>
+                            </div>
+                            {!user?.is_shopkeeper ? (
+                                <div className="profile-credit-modal-dl-row">
+                                    <dt>Remaining</dt>
+                                    <dd>{formatMMK(remainingCredit)}</dd>
+                                </div>
+                            ) : null}
+                        </dl>
+
+                        <div
+                            className={`profile-credit-modal-callout${
+                                user?.is_shopkeeper
+                                    ? ' profile-credit-modal-callout--ok'
+                                    : eligibility.eligible
+                                      ? ' profile-credit-modal-callout--ok'
+                                      : ' profile-credit-modal-callout--muted'
+                            }`}
+                        >
+                            {user?.is_shopkeeper ? (
+                                <p>You have the Shopkeeper role. Credit still reflects your purchase history.</p>
+                            ) : eligibility.eligible ? (
+                                <p>You meet the threshold and can apply for Shopkeeper below.</p>
+                            ) : (
+                                <p>
+                                    Keep shopping — when your credit reaches the threshold, you can apply to become a
+                                    Shopkeeper.
+                                </p>
+                            )}
+                        </div>
+
+                        <p className="profile-credit-modal-footnote">
+                            You earn <strong>1 credit per 1 MMK</strong> from completed paid orders.
+                        </p>
+
+                        {!user?.is_shopkeeper ? (
+                            <div className="profile-credit-modal-actions">
+                                <button
+                                    type="button"
+                                    className="profile-credit-modal-apply"
+                                    onClick={handleApplyShopkeeper}
+                                    disabled={applyBusy || !canApply}
+                                >
+                                    {applyBusy ? (
+                                        <>
+                                            <Loader2 size={16} className="profile-sign-out-spinner" aria-hidden="true" />
+                                            Applying…
+                                        </>
+                                    ) : (
+                                        'Apply for Shopkeeper'
+                                    )}
+                                </button>
+                            </div>
+                        ) : null}
+                    </div>
+                </div>
+            ) : null}
 
             <div className="profile-layout">
                 <div className="profile-main">
@@ -305,7 +536,7 @@ export default function Profile() {
                                                     {orderStatusLabel(order.status)}
                                                 </span>
                                                 <span className="profile-order-total">
-                                                    {formatMoney(order.total_amount)}
+                                                    {formatMMK(order.total_amount_mmk)}
                                                 </span>
                                             </div>
                                         </div>
@@ -315,7 +546,7 @@ export default function Profile() {
                                                     <div className="profile-order-line-top">
                                                         <span className="profile-order-line-name">{line.product_name}</span>
                                                         <span className="profile-order-line-price">
-                                                            {formatMoney(line.line_total)}
+                                                            {formatMMK(line.line_total_mmk)}
                                                         </span>
                                                     </div>
                                                     <div className="profile-order-line-sub">

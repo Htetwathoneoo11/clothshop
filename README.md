@@ -20,12 +20,25 @@ It is built as a Laravel backend API with a React single-page frontend.
 - Database: MySQL (default local setup), sqlite in-memory for tests
 - Testing: PHPUnit feature/unit tests via `php artisan test`
 
+## Credit score & Shopkeeper role
+
+- **Credit score** increases by the order `total_amount_mmk` when a paid order is completed (once per order; tracked via `orders.credit_awarded_at`).
+- **Shopkeeper application**: `POST /api/shopkeeper/apply` (authenticated). Requires `credit_score` ≥ `SHOPKEEPER_CREDIT_THRESHOLD` (default **500000** MMK in `config/commerce.php`). Already a Shopkeeper → friendly success with no role change.
+
+## Currency (MMK)
+
+- Display currency is **MMK** (integer kyat, no decimals in the UI).
+- Product, cart, checkout, and order APIs expose integer `*_mmk` fields; responses include `currency_code: "MMK"` where relevant.
+- Legacy decimal columns (`price`, `unit_price`, `total_amount`, etc.) are retained for transition; new writes also populate these using `MMK_PER_USD` (default **2100**) where backward-compatible strings are needed.
+- Shared backend helper: `App\Support\MmkMoney`. Shared frontend formatting: `resources/js/spa/utils/money.js` (`formatMMK`, `toIntegerMMK`).
+
 ## Project Structure
 
 - `routes/web.php`: catch-all route that serves the SPA shell
 - `routes/api.php`: JSON API routes for auth, products, cart, checkout, profile, orders
 - `app/Http/Controllers/Api`: API controllers
 - `app/Models`: domain models (`Product`, `ProductVariant`, `Cart`, `Order`, etc.)
+- `app/Support/MmkMoney.php`: integer MMK helpers (conversion for legacy USD decimals)
 - `resources/js/spa`: React SPA pages/components
 - `resources/views/spa.blade.php`: SPA entry view
 - `tests/Feature`: API and auth feature tests

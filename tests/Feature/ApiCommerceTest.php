@@ -8,6 +8,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\User;
+use App\Support\MmkMoney;
 use InvalidArgumentException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -87,6 +88,7 @@ class ApiCommerceTest extends TestCase
             'product_variant_id' => $variant->id,
             'quantity' => 2,
             'unit_price' => '19.99',
+            'unit_price_mmk' => MmkMoney::usdDecimalToMmk('19.99'),
         ]);
 
         $response = $this->actingAs($user)->postJson('/api/checkout', $this->checkoutPayload());
@@ -116,21 +118,26 @@ class ApiCommerceTest extends TestCase
             'product_variant_id' => $variant->id,
             'quantity' => 2,
             'unit_price' => '19.99',
+            'unit_price_mmk' => MmkMoney::usdDecimalToMmk('19.99'),
         ]);
 
         $response = $this->actingAs($user)->postJson('/api/checkout', $this->checkoutPayload());
-        $response->assertOk()->assertJsonPath('message', 'Checkout successful.');
+        $response->assertOk()->assertJsonPath('message', 'Checkout successful.')->assertJsonPath('currency_code', 'MMK');
 
         $order = Order::query()->where('user_id', $user->id)->latest('id')->first();
         $this->assertNotNull($order);
 
+        $unitMmk = MmkMoney::usdDecimalToMmk('19.99');
+        $expectedTotalMmk = MmkMoney::lineTotalMmk(2, $unitMmk);
+
+        $this->assertSame($expectedTotalMmk, (int) $order->total_amount_mmk);
         $this->assertSame('39.98', (string) $order->total_amount);
         $this->assertDatabaseHas('order_items', [
             'order_id' => $order->id,
             'product_variant_id' => $variant->id,
             'quantity' => 2,
-            'unit_price' => 19.99,
-            'line_total' => 39.98,
+            'unit_price_mmk' => $unitMmk,
+            'line_total_mmk' => $expectedTotalMmk,
         ]);
         $this->assertDatabaseMissing('cart_items', [
             'cart_id' => $cart->id,
@@ -140,6 +147,12 @@ class ApiCommerceTest extends TestCase
             'id' => $variant->id,
             'stock' => 3,
         ]);
+
+        $ordersResponse = $this->actingAs($user)->getJson('/api/orders')->assertOk();
+        $ordersResponse->assertJsonPath('orders.0.currency_code', 'MMK');
+        $ordersResponse->assertJsonPath('orders.0.total_amount_mmk', $expectedTotalMmk);
+        $line = $ordersResponse->json('orders.0.items.0');
+        $this->assertSame($line['quantity'] * $line['unit_price_mmk'], $line['line_total_mmk']);
     }
 
     public function test_order_model_rejects_invalid_status(): void
@@ -171,6 +184,7 @@ class ApiCommerceTest extends TestCase
             'color' => 'Black',
             'size' => 'M',
             'price' => $price,
+            'price_mmk' => MmkMoney::usdDecimalToMmk($price),
             'stock' => $stock,
             'sku' => 'TEST-' . $stock . '-' . uniqid(),
         ]);

@@ -16,11 +16,15 @@ class OrderItem extends Model
         'quantity',
         'unit_price',
         'line_total',
+        'unit_price_mmk',
+        'line_total_mmk',
     ];
 
     protected $casts = [
         'unit_price' => 'decimal:2',
         'line_total' => 'decimal:2',
+        'unit_price_mmk' => 'integer',
+        'line_total_mmk' => 'integer',
     ];
 
     public function order(): BelongsTo

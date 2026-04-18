@@ -27,6 +27,7 @@ class Order extends Model
     protected $fillable = [
         'user_id',
         'total_amount',
+        'total_amount_mmk',
         'status',
         'name',
         'phone_number',
@@ -37,10 +38,13 @@ class Order extends Model
         'township',
         'city',
         'payment_method',
+        'credit_awarded_at',
     ];
 
     protected $casts = [
         'total_amount' => 'decimal:2',
+        'total_amount_mmk' => 'integer',
+        'credit_awarded_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -60,5 +64,10 @@ class Order extends Model
     public function items(): HasMany
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    public function isCreditAwarded(): bool
+    {
+        return $this->credit_awarded_at !== null;
     }
 }

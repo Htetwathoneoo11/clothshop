@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { formatMMK } from './utils/money.js';
 
 function ProductCardSkeleton() {
     return (
@@ -143,9 +144,11 @@ export default function Dashboard() {
                             {products.map((product) => {
                                 const variants = product.variants || [];
                                 const inStock = variants.filter((v) => v.stock > 0);
-                                const minPrice = inStock.length > 0
-                                    ? Math.min(...inStock.map((v) => Number(v.price)))
-                                    : null;
+                                const minPriceMmk = product.variants_min_price_mmk != null
+                                    ? Number(product.variants_min_price_mmk)
+                                    : (inStock.length > 0
+                                        ? Math.min(...inStock.map((v) => Number(v.price_mmk)))
+                                        : null);
 
                                 return (
                                     <article key={product.id} className="product-card-dashboard">
@@ -166,9 +169,9 @@ export default function Dashboard() {
                                             <p className="product-card-dashboard-meta">
                                                 {product.brand || 'Unbranded'}
                                             </p>
-                                            {minPrice !== null && (
+                                            {minPriceMmk !== null && !Number.isNaN(minPriceMmk) && (
                                                 <p className="product-card-dashboard-price">
-                                                    From <span className="product-card-dashboard-price-value">${minPrice.toFixed(2)}</span>
+                                                    From <span className="product-card-dashboard-price-value">{formatMMK(minPriceMmk)}</span>
                                                 </p>
                                             )}
                                             <p className="product-card-dashboard-desc">

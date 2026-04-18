@@ -3,12 +3,13 @@ import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { CreditCard, Loader2, ShoppingBag, ChevronLeft, ShieldCheck, Wallet } from 'lucide-react';
 import { useCart } from '../cart/CartContext.jsx';
+import { formatMMK, toIntegerMMK } from '../utils/money.js';
 
 axios.defaults.withCredentials = true;
 
 export default function Checkout() {
     const [items, setItems] = useState([]);
-    const [subtotal, setSubtotal] = useState(0);
+    const [subtotalMmk, setSubtotalMmk] = useState(0);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
     const [notice, setNotice] = useState({ type: '', text: '' });
@@ -25,7 +26,6 @@ export default function Checkout() {
     });
     const { refreshCartCount } = useCart();
 
-    const formatMoney = (amount) => `$${Number(amount || 0).toFixed(2)}`;
     const totalItems = useMemo(
         () => items.reduce((sum, item) => sum + Number(item.quantity || 0), 0),
         [items]
@@ -37,7 +37,7 @@ export default function Checkout() {
             .get('/api/cart')
             .then((res) => {
                 setItems(res.data.items || []);
-                setSubtotal(res.data.subtotal || 0);
+                setSubtotalMmk(toIntegerMMK(res.data.subtotal_mmk));
             })
             .finally(() => setLoading(false));
     }, []);
@@ -259,8 +259,8 @@ export default function Checkout() {
                                         </p>
                                     </div>
                                     <div className="checkout-item-price">
-                                        <span>{item.quantity} x {formatMoney(item.unit_price)}</span>
-                                        <strong>{formatMoney(item.quantity * Number(item.unit_price))}</strong>
+                                        <span>{item.quantity} x {formatMMK(item.unit_price_mmk)}</span>
+                                        <strong>{formatMMK(toIntegerMMK(item.quantity) * toIntegerMMK(item.unit_price_mmk))}</strong>
                                     </div>
                                 </article>
                             ))}
@@ -271,7 +271,7 @@ export default function Checkout() {
                         </div>
                         <div className="checkout-summary-row">
                             <span>Subtotal</span>
-                            <strong>{formatMoney(subtotal)}</strong>
+                            <strong>{formatMMK(subtotalMmk)}</strong>
                         </div>
                         <div className="checkout-secure-note">
                             <ShieldCheck size={15} aria-hidden="true" />

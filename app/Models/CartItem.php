@@ -15,10 +15,12 @@ class CartItem extends Model
         'product_variant_id',
         'quantity',
         'unit_price',
+        'unit_price_mmk',
     ];
 
     protected $casts = [
         'unit_price' => 'decimal:2',
+        'unit_price_mmk' => 'integer',
     ];
 
     public function cart(): BelongsTo

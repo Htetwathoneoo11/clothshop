@@ -58,7 +58,7 @@ class AuthController extends Controller
             'username' => $data['username'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),
-            'role' => 1,
+            'role' => User::ROLE_MEMBER,
             'status' => 1,
         ]);
 

@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CheckoutController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\ShopkeeperApplicationController;
 
 // Public auth + catalog
 Route::post('/auth/login', [AuthController::class, 'login']);
@@ -31,4 +32,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('/cart/{cartItem}', [CartController::class, 'destroy']);
 
     Route::post('/checkout', [CheckoutController::class, 'store']);
+
+    Route::post('/shopkeeper/apply', [ShopkeeperApplicationController::class, 'apply']);
 });

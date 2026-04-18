@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\ProductVariant;
+use App\Support\MmkMoney;
 use Illuminate\Http\Request;
 
 class CartController extends Controller
@@ -15,9 +16,15 @@ class CartController extends Controller
         $cart = $this->userCart($request);
         $items = $cart->items()->with('variant.product')->get();
 
+        $subtotalMmk = (int) $items->sum(
+            fn ($item) => (int) $item->quantity * (int) $item->unit_price_mmk
+        );
+
         return response()->json([
             'items' => $items,
-            'subtotal' => $items->sum(fn ($item) => $item->quantity * $item->unit_price),
+            'subtotal_mmk' => $subtotalMmk,
+            'subtotal' => MmkMoney::mmkToUsdDecimalString($subtotalMmk),
+            'currency_code' => 'MMK',
         ]);
     }
 
@@ -51,6 +58,7 @@ class CartController extends Controller
                 'product_variant_id' => $variant->id,
                 'quantity' => $quantity,
                 'unit_price' => $variant->price,
+                'unit_price_mmk' => (int) $variant->price_mmk,
             ]);
         }
 

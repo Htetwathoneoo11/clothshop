@@ -9,6 +9,8 @@ class ProductSeeder extends Seeder
 {
     public function run(): void
     {
+        $mmkPerUsd = max(1, (int) config('money.mmk_per_usd', 2100));
+
         $products = [
             [
                 'name' => 'Classic T-Shirt',
@@ -155,9 +157,12 @@ class ProductSeeder extends Seeder
             );
 
             foreach ($product['variants'] as $variant) {
+                $priceMmk = (int) round((float) $variant['price'] * $mmkPerUsd);
                 $dbProduct->variants()->updateOrCreate(
                     ['sku' => $variant['sku']],
-                    $variant
+                    array_merge($variant, [
+                        'price_mmk' => $priceMmk,
+                    ])
                 );
             }
         }
