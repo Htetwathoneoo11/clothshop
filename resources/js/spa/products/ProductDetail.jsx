@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import { ChevronLeft, Loader2, Package, ShoppingCart, ArrowRight } from 'lucide-react';
 axios.defaults.withCredentials = true;
 import { useCart } from '../cart/CartContext.jsx';
 import { formatMMK } from '../utils/money.js';
@@ -37,6 +38,11 @@ export default function ProductDetail() {
 
     const variants = product?.variants || [];
     const inStockVariants = variants.filter(v => v.stock > 0);
+
+    const selectedVariant = useMemo(() => {
+        if (!selectedVariantId) return null;
+        return variants.find((v) => String(v.id) === String(selectedVariantId)) ?? null;
+    }, [variants, selectedVariantId]);
 
     const colors = useMemo(() => {
         return [...new Set(inStockVariants.map(v => v.color))];
@@ -102,57 +108,119 @@ export default function ProductDetail() {
         }
     };
 
-    if (error) return <p>{error}</p>;
-    if (!product) return <p>Loading...</p>;
+    if (error) {
+        return (
+            <div className="page-container product-detail">
+                <div className="product-detail-state product-detail-state--error">
+                    <Package size={40} strokeWidth={1.25} className="product-detail-state-icon" aria-hidden="true" />
+                    <h1 className="product-detail-state-title">{error}</h1>
+                    <p className="product-detail-state-lede">This product may have been removed or the link is incorrect.</p>
+                    <Link to="/dashboard" className="product-detail-back-link product-detail-back-link--cta">
+                        <ChevronLeft size={18} aria-hidden="true" />
+                        Back to shop
+                    </Link>
+                </div>
+            </div>
+        );
+    }
+
+    if (!product) {
+        return (
+            <div className="page-container product-detail">
+                <div className="product-detail-state product-detail-state--loading">
+                    <Loader2 size={36} className="product-detail-state-spinner" aria-hidden="true" />
+                    <p className="product-detail-state-loading-text">Loading product…</p>
+                </div>
+            </div>
+        );
+    }
+
+    const messageIsError =
+        message &&
+        (message.includes('Failed') || message.includes('Please select') || message.includes('Could not'));
 
     return (
         <div className="page-container product-detail">
-            <div className="product-detail-back">
-                <Link to="/dashboard" className="btn-back">← Back to products</Link>
-            </div>
+            <nav className="product-detail-back" aria-label="Breadcrumb">
+                <Link to="/dashboard" className="product-detail-back-link">
+                    <ChevronLeft size={18} aria-hidden="true" />
+                    Back to shop
+                </Link>
+            </nav>
 
             <div className="product-detail-grid">
                 <div className="product-detail-media">
-                    {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} className="product-detail-image" />
-                    ) : (
-                        <div className="product-detail-placeholder">No image</div>
-                    )}
+                    <div className="product-detail-media-card">
+                        {product.image_url ? (
+                            <img src={product.image_url} alt={product.name} className="product-detail-image" />
+                        ) : (
+                            <div className="product-detail-placeholder">
+                                <Package size={40} strokeWidth={1.25} aria-hidden="true" />
+                                <span>No image</span>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="product-detail-info">
-                    <p className="product-detail-meta">{product.brand || 'Unbranded'} - {product.category}</p>
+                    <div className="product-detail-badges">
+                        <span className="product-detail-badge">{product.brand || 'Unbranded'}</span>
+                        <span className="product-detail-badge product-detail-badge--muted">{product.category}</span>
+                    </div>
+
                     <h1 className="page-title product-detail-title">{product.name}</h1>
+
+                    {inStockVariants.length > 0 && selectedVariant ? (
+                        <div className="product-detail-price-row">
+                            <span className="product-detail-price">{formatMMK(selectedVariant.price_mmk)}</span>
+                            <span className="product-detail-stock-pill">
+                                {selectedVariant.stock} in stock
+                            </span>
+                        </div>
+                    ) : null}
+
                     <p className="product-detail-description">{product.description}</p>
 
                     {inStockVariants.length > 0 ? (
                         <>
-                            <div className="product-detail-variants-heading">Choose color & size</div>
+                            <div className="product-detail-variants-heading">Choose options</div>
 
                             <div className="product-detail-selects">
-                                <label className="product-detail-label">Color</label>
-                                <select
-                                    value={selectedColor}
-                                    onChange={(e) => setSelectedColor(e.target.value)}
-                                    className="variant-color-select"
-                                >
-                                    {colors.map((c) => (
-                                        <option key={c} value={c}>{c}</option>
-                                    ))}
-                                </select>
+                                <div className="product-detail-field">
+                                    <label className="product-detail-label" htmlFor="product-detail-color">
+                                        Color
+                                    </label>
+                                    <select
+                                        id="product-detail-color"
+                                        value={selectedColor}
+                                        onChange={(e) => setSelectedColor(e.target.value)}
+                                        className="product-detail-select variant-color-select"
+                                    >
+                                        {colors.map((c) => (
+                                            <option key={c} value={c}>
+                                                {c}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
 
-                                <label className="product-detail-label">Size</label>
-                                <select
-                                    value={selectedVariantId}
-                                    onChange={(e) => setSelectedVariantId(e.target.value)}
-                                    className="variant-size-select"
-                                >
-                                    {sizeOptions.map((v) => (
-                                        <option key={v.id} value={v.id}>
-                                            {v.size} - {formatMMK(v.price_mmk)} ({v.stock} in stock)
-                                        </option>
-                                    ))}
-                                </select>
+                                <div className="product-detail-field">
+                                    <label className="product-detail-label" htmlFor="product-detail-size">
+                                        Size & price
+                                    </label>
+                                    <select
+                                        id="product-detail-size"
+                                        value={selectedVariantId}
+                                        onChange={(e) => setSelectedVariantId(e.target.value)}
+                                        className="product-detail-select variant-size-select"
+                                    >
+                                        {sizeOptions.map((v) => (
+                                            <option key={v.id} value={v.id}>
+                                                {v.size} — {formatMMK(v.price_mmk)} ({v.stock} left)
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
 
                             <div className="product-detail-actions">
@@ -162,7 +230,17 @@ export default function ProductDetail() {
                                     onClick={handleAddToCart}
                                     disabled={loadingAction !== ''}
                                 >
-                                    {loadingAction === 'add' ? 'Adding...' : 'Add to cart'}
+                                    {loadingAction === 'add' ? (
+                                        <>
+                                            <Loader2 size={18} className="product-detail-btn-icon product-detail-btn-spinner" aria-hidden="true" />
+                                            Adding…
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ShoppingCart size={18} className="product-detail-btn-icon" aria-hidden="true" />
+                                            Add to cart
+                                        </>
+                                    )}
                                 </button>
                                 <button
                                     type="button"
@@ -170,14 +248,37 @@ export default function ProductDetail() {
                                     onClick={handleBuyNow}
                                     disabled={loadingAction !== ''}
                                 >
-                                    {loadingAction === 'buy' ? 'Going to checkout...' : 'Buy now'}
+                                    {loadingAction === 'buy' ? (
+                                        <>
+                                            <Loader2 size={18} className="product-detail-btn-icon product-detail-btn-spinner" aria-hidden="true" />
+                                            Checkout…
+                                        </>
+                                    ) : (
+                                        <>
+                                            Buy now
+                                            <ArrowRight size={18} className="product-detail-btn-icon" aria-hidden="true" />
+                                        </>
+                                    )}
                                 </button>
                             </div>
 
-                            {message && <p>{message}</p>}
+                            {message ? (
+                                <p
+                                    className={
+                                        messageIsError
+                                            ? 'product-detail-message product-detail-message--error'
+                                            : 'product-detail-message product-detail-message--success'
+                                    }
+                                    role="status"
+                                >
+                                    {message}
+                                </p>
+                            ) : null}
                         </>
                     ) : (
-                        <p className="product-detail-oos">All variants are currently out of stock.</p>
+                        <div className="product-detail-oos-card">
+                            <p className="product-detail-oos">All variants are currently out of stock.</p>
+                        </div>
                     )}
                 </div>
             </div>

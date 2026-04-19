@@ -10,6 +10,7 @@ export default defineConfig({
                     'resources/css/product.css',
                     'resources/css/profile.css',
                     'resources/js/spa/main.jsx',
+                    'resources/views/welcome.blade.php',
             ],
             refresh: true,
         }),
