@@ -2,7 +2,6 @@
 
 return [
     /*
-    | Minimum lifetime credit score (MMK from completed purchases) required to apply for Shopkeeper.
+    | Reserved for commerce-related settings (e.g. pricing rules).
     */
-    'shopkeeper_credit_threshold' => (int) env('SHOPKEEPER_CREDIT_THRESHOLD', 500_000),
 ];

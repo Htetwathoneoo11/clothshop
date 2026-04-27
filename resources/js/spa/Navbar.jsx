@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { NavLink, useLocation } from 'react-router-dom';
-import { House, ShoppingCart } from 'lucide-react';
+import { Box, Eye, House, LayoutPanelTop, ShoppingCart } from 'lucide-react';
 import { useCart } from './cart/CartContext.jsx';
 
 
@@ -37,22 +37,48 @@ export default function Navbar() {
                 <NavLink
                     to="/dashboard"
                     className={({ isActive }) => `nav-link nav-link--icon ${isActive ? 'nav-link-active' : ''}`}
-                    title="Shop"
-                    aria-label="Shop"
+                    title={user?.is_admin ? 'View as customer' : 'Shop'}
+                    aria-label={user?.is_admin ? 'View as customer' : 'Shop'}
                 >
-                    <House size={18} strokeWidth={2.2} aria-hidden="true" />
+                    {user?.is_admin ? (
+                        <Eye size={18} strokeWidth={2.2} aria-hidden="true" />
+                    ) : (
+                        <House size={18} strokeWidth={2.2} aria-hidden="true" />
+                    )}
                 </NavLink>
                 {user ? (
                     <>
-                        <NavLink
-                            to="/cart"
-                            className={({ isActive }) => `nav-link nav-link--icon nav-link--cart ${isActive ? 'nav-link-active' : ''}`}
-                            title="Cart"
-                            aria-label="Cart"
-                        >
-                            <ShoppingCart size={18} strokeWidth={2.2} aria-hidden="true" />
-                            {cartCount > 0 ? <span className="nav-cart-badge">{cartCount}</span> : null}
-                        </NavLink>
+                        {!user.is_admin ? (
+                            <NavLink
+                                to="/cart"
+                                className={({ isActive }) => `nav-link nav-link--icon nav-link--cart ${isActive ? 'nav-link-active' : ''}`}
+                                title="Cart"
+                                aria-label="Cart"
+                            >
+                                <ShoppingCart size={18} strokeWidth={2.2} aria-hidden="true" />
+                                {cartCount > 0 ? <span className="nav-cart-badge">{cartCount}</span> : null}
+                            </NavLink>
+                        ) : null}
+                        {user.is_admin ? (
+                            <>
+                                <NavLink
+                                    to="/admin/products"
+                                    className={({ isActive }) => `nav-link nav-link--icon ${isActive ? 'nav-link-active' : ''}`}
+                                    title="Products"
+                                    aria-label="Products"
+                                >
+                                    <Box size={18} strokeWidth={2.2} aria-hidden="true" />
+                                </NavLink>
+                                <NavLink
+                                    to="/admin/boards"
+                                    className={({ isActive }) => `nav-link nav-link--icon ${isActive ? 'nav-link-active' : ''}`}
+                                    title="Boards"
+                                    aria-label="Boards"
+                                >
+                                    <LayoutPanelTop size={18} strokeWidth={2.2} aria-hidden="true" />
+                                </NavLink>
+                            </>
+                        ) : null}
                         <NavLink
                             to="/profile"
                             className={({ isActive }) => `nav-link nav-link--profile ${isActive ? 'nav-link-active' : ''}`}
@@ -82,3 +108,6 @@ export default function Navbar() {
         </header>
     );
 }
+
+
+

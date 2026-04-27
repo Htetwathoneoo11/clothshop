@@ -16,6 +16,8 @@ class CheckoutController extends Controller
 {
     public function store(Request $request)
     {
+        abort_if($request->user()?->isAdmin(), 403, 'Admins cannot use cart or checkout.');
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'phone_number' => ['required', 'string', 'max:50'],

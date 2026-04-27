@@ -2,9 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { ChevronLeft, Loader2, Package, ShoppingCart, ArrowRight } from 'lucide-react';
-axios.defaults.withCredentials = true;
 import { useCart } from '../cart/CartContext.jsx';
 import { formatMMK } from '../utils/money.js';
+
+axios.defaults.withCredentials = true;
 
 export default function ProductDetail() {
     const { id } = useParams();
@@ -17,6 +18,7 @@ export default function ProductDetail() {
     const [selectedVariantId, setSelectedVariantId] = useState('');
     const [loadingAction, setLoadingAction] = useState('');
     const [message, setMessage] = useState('');
+    const [isAdminViewer, setIsAdminViewer] = useState(false);
 
     useEffect(() => {
         fetch(`/api/products/${id}`)
@@ -27,7 +29,7 @@ export default function ProductDetail() {
             .then((data) => {
                 setProduct(data.product);
                 const variants = data.product?.variants || [];
-                const firstInStock = variants.find(v => v.stock > 0);
+                const firstInStock = variants.find((v) => v.stock > 0);
                 if (firstInStock) {
                     setSelectedColor(firstInStock.color);
                     setSelectedVariantId(firstInStock.id);
@@ -36,8 +38,23 @@ export default function ProductDetail() {
             .catch(() => setError('Product not found.'));
     }, [id]);
 
+    useEffect(() => {
+        let cancelled = false;
+        axios.get('/api/me')
+            .then((res) => {
+                if (!cancelled) setIsAdminViewer(Boolean(res.data?.user?.is_admin));
+            })
+            .catch(() => {
+                if (!cancelled) setIsAdminViewer(false);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
     const variants = product?.variants || [];
-    const inStockVariants = variants.filter(v => v.stock > 0);
+    const inStockVariants = variants.filter((v) => v.stock > 0);
 
     const selectedVariant = useMemo(() => {
         if (!selectedVariantId) return null;
@@ -45,11 +62,11 @@ export default function ProductDetail() {
     }, [variants, selectedVariantId]);
 
     const colors = useMemo(() => {
-        return [...new Set(inStockVariants.map(v => v.color))];
+        return [...new Set(inStockVariants.map((v) => v.color))];
     }, [inStockVariants]);
 
     const sizeOptions = useMemo(() => {
-        return inStockVariants.filter(v => v.color === selectedColor);
+        return inStockVariants.filter((v) => v.color === selectedColor);
     }, [inStockVariants, selectedColor]);
 
     useEffect(() => {
@@ -75,12 +92,14 @@ export default function ProductDetail() {
         setMessage('');
         try {
             const added = await addSelectedVariantToCart();
-            if (added) {
-                setMessage('Added to cart.');
-            }
+            if (added) setMessage('Added to cart.');
         } catch (err) {
             if (err.response?.status === 401) {
                 navigate('/login');
+                return;
+            }
+            if (err.response?.status === 403) {
+                setMessage('Admin accounts are preview-only and cannot buy products.');
                 return;
             }
             setMessage(err.response?.data?.message || 'Failed to add to cart.');
@@ -94,12 +113,14 @@ export default function ProductDetail() {
         setMessage('');
         try {
             const added = await addSelectedVariantToCart();
-            if (added) {
-                navigate('/checkout');
-            }
+            if (added) navigate('/checkout');
         } catch (err) {
             if (err.response?.status === 401) {
                 navigate('/login');
+                return;
+            }
+            if (err.response?.status === 403) {
+                setMessage('Admin accounts are preview-only and cannot buy products.');
                 return;
             }
             setMessage(err.response?.data?.message || 'Failed to continue to checkout.');
@@ -129,7 +150,7 @@ export default function ProductDetail() {
             <div className="page-container product-detail">
                 <div className="product-detail-state product-detail-state--loading">
                     <Loader2 size={36} className="product-detail-state-spinner" aria-hidden="true" />
-                    <p className="product-detail-state-loading-text">Loading product…</p>
+                    <p className="product-detail-state-loading-text">Loading product...</p>
                 </div>
             </div>
         );
@@ -173,9 +194,7 @@ export default function ProductDetail() {
                     {inStockVariants.length > 0 && selectedVariant ? (
                         <div className="product-detail-price-row">
                             <span className="product-detail-price">{formatMMK(selectedVariant.price_mmk)}</span>
-                            <span className="product-detail-stock-pill">
-                                {selectedVariant.stock} in stock
-                            </span>
+                            <span className="product-detail-stock-pill">{selectedVariant.stock} in stock</span>
                         </div>
                     ) : null}
 
@@ -206,7 +225,7 @@ export default function ProductDetail() {
 
                                 <div className="product-detail-field">
                                     <label className="product-detail-label" htmlFor="product-detail-size">
-                                        Size & price
+                                        Size and price
                                     </label>
                                     <select
                                         id="product-detail-size"
@@ -216,51 +235,57 @@ export default function ProductDetail() {
                                     >
                                         {sizeOptions.map((v) => (
                                             <option key={v.id} value={v.id}>
-                                                {v.size} — {formatMMK(v.price_mmk)} ({v.stock} left)
+                                                {v.size} - {formatMMK(v.price_mmk)} ({v.stock} left)
                                             </option>
                                         ))}
                                     </select>
                                 </div>
                             </div>
 
-                            <div className="product-detail-actions">
-                                <button
-                                    type="button"
-                                    className="btn-primary product-detail-add"
-                                    onClick={handleAddToCart}
-                                    disabled={loadingAction !== ''}
-                                >
-                                    {loadingAction === 'add' ? (
-                                        <>
-                                            <Loader2 size={18} className="product-detail-btn-icon product-detail-btn-spinner" aria-hidden="true" />
-                                            Adding…
-                                        </>
-                                    ) : (
-                                        <>
-                                            <ShoppingCart size={18} className="product-detail-btn-icon" aria-hidden="true" />
-                                            Add to cart
-                                        </>
-                                    )}
-                                </button>
-                                <button
-                                    type="button"
-                                    className="btn-primary product-detail-buy-now"
-                                    onClick={handleBuyNow}
-                                    disabled={loadingAction !== ''}
-                                >
-                                    {loadingAction === 'buy' ? (
-                                        <>
-                                            <Loader2 size={18} className="product-detail-btn-icon product-detail-btn-spinner" aria-hidden="true" />
-                                            Checkout…
-                                        </>
-                                    ) : (
-                                        <>
-                                            Buy now
-                                            <ArrowRight size={18} className="product-detail-btn-icon" aria-hidden="true" />
-                                        </>
-                                    )}
-                                </button>
-                            </div>
+                            {isAdminViewer ? (
+                                <p className="product-detail-message product-detail-message--success" role="status">
+                                    Preview mode: admin accounts can view products but cannot add to cart or checkout.
+                                </p>
+                            ) : (
+                                <div className="product-detail-actions">
+                                    <button
+                                        type="button"
+                                        className="btn-primary product-detail-add"
+                                        onClick={handleAddToCart}
+                                        disabled={loadingAction !== ''}
+                                    >
+                                        {loadingAction === 'add' ? (
+                                            <>
+                                                <Loader2 size={18} className="product-detail-btn-icon product-detail-btn-spinner" aria-hidden="true" />
+                                                Adding...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ShoppingCart size={18} className="product-detail-btn-icon" aria-hidden="true" />
+                                                Add to cart
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="btn-primary product-detail-buy-now"
+                                        onClick={handleBuyNow}
+                                        disabled={loadingAction !== ''}
+                                    >
+                                        {loadingAction === 'buy' ? (
+                                            <>
+                                                <Loader2 size={18} className="product-detail-btn-icon product-detail-btn-spinner" aria-hidden="true" />
+                                                Checkout...
+                                            </>
+                                        ) : (
+                                            <>
+                                                Buy now
+                                                <ArrowRight size={18} className="product-detail-btn-icon" aria-hidden="true" />
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            )}
 
                             {message ? (
                                 <p
@@ -285,3 +310,4 @@ export default function ProductDetail() {
         </div>
     );
 }
+

@@ -2,6 +2,25 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { formatMMK } from './utils/money.js';
 
+const DASHBOARD_HERO_DEFAULT_SUBTITLE =
+    'Browse tops, outerwear, and more. Filter by category, sort by price, or search the catalog.';
+
+function heroCtaExternalAttrs(href) {
+    try {
+        const u = new URL(href, window.location.origin);
+        if (u.origin !== window.location.origin) {
+            return { target: '_blank', rel: 'noopener noreferrer' };
+        }
+    } catch {
+        return { rel: 'noopener noreferrer' };
+    }
+    return {};
+}
+
+function isInternalAppHref(href) {
+    return typeof href === 'string' && href.startsWith('/') && !href.startsWith('//');
+}
+
 function ProductCardSkeleton() {
     return (
         <div className="product-card-skeleton" aria-hidden>
@@ -25,6 +44,30 @@ export default function Dashboard() {
     const [sort, setSort] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [hero, setHero] = useState(null);
+    const [heroLoading, setHeroLoading] = useState(false);
+
+    useEffect(() => {
+        let cancelled = false;
+        setHeroLoading(true);
+        fetch('/api/boards/active')
+            .then((res) => {
+                if (!res.ok) throw new Error('Failed hero');
+                return res.json();
+            })
+            .then((data) => {
+                if (!cancelled) setHero(data.board || data.banner || null);
+            })
+            .catch(() => {
+                if (!cancelled) setHero(null);
+            })
+            .finally(() => {
+                if (!cancelled) setHeroLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     useEffect(() => {
         const params = new URLSearchParams();
@@ -52,19 +95,55 @@ export default function Dashboard() {
     const showEmpty = !loading && products.length === 0 && !error;
     const showGrid = products.length > 0;
 
+    const heroTitle = hero?.title ?? 'Wardrobe essentials, curated for you';
+    const heroImageAlt = hero?.title
+        ? `Board: ${hero.title}`
+        : 'Promotional hero banner';
+
     return (
         <div className="page-container page-container--dashboard" id="product-dashboard">
-            <section className="dashboard-hero" aria-labelledby="dashboard-hero-heading">
+            <section
+                className="dashboard-hero"
+                aria-labelledby="dashboard-hero-heading"
+                aria-busy={heroLoading}
+            >
                 <div className="dashboard-hero-copy">
-                    <p className="dashboard-hero-eyebrow">New season</p>
+                    <p className="dashboard-hero-eyebrow">{hero ? 'Promotion' : 'New season'}</p>
                     <h1 id="dashboard-hero-heading" className="dashboard-hero-title">
-                        Wardrobe essentials, curated for you
+                        {heroTitle}
                     </h1>
                     <p className="dashboard-hero-sub">
-                        Browse tops, outerwear, and more. Filter by category, sort by price, or search the catalog.
+                        {hero?.subtitle ?? DASHBOARD_HERO_DEFAULT_SUBTITLE}
                     </p>
+                    {hero?.cta_text && hero?.cta_link ? (
+                        isInternalAppHref(hero.cta_link) ? (
+                            <Link to={hero.cta_link} className="dashboard-hero-cta">
+                                {hero.cta_text}
+                            </Link>
+                        ) : (
+                            <a
+                                href={hero.cta_link}
+                                className="dashboard-hero-cta"
+                                {...heroCtaExternalAttrs(hero.cta_link)}
+                            >
+                                {hero.cta_text}
+                            </a>
+                        )
+                    ) : null}
                 </div>
-                <div className="dashboard-hero-accent" aria-hidden />
+                {hero?.image_url ? (
+                    <div className="dashboard-hero-accent dashboard-hero-accent--has-media">
+                        <img
+                            src={hero.image_url}
+                            alt={heroImageAlt}
+                            className="dashboard-hero-img"
+                            loading="lazy"
+                            decoding="async"
+                        />
+                    </div>
+                ) : (
+                    <div className="dashboard-hero-accent" aria-hidden />
+                )}
             </section>
 
             <section className="dashboard-catalog" aria-label="Product catalog">
@@ -188,3 +267,6 @@ export default function Dashboard() {
         </div>
     );
 }
+
+
+

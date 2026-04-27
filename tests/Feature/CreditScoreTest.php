@@ -13,15 +13,9 @@ use App\Support\MmkMoney;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class ShopkeeperCreditTest extends TestCase
+class CreditScoreTest extends TestCase
 {
     use RefreshDatabase;
-
-    protected function setUp(): void
-    {
-        parent::setUp();
-        config(['commerce.shopkeeper_credit_threshold' => 10_000]);
-    }
 
     public function test_checkout_awards_credit_equal_to_total_amount_mmk(): void
     {
@@ -72,58 +66,36 @@ class ShopkeeperCreditTest extends TestCase
         $this->assertSame($score, (int) $user->fresh()->credit_score);
     }
 
-    public function test_apply_rejects_below_threshold_with_remaining(): void
+    public function test_me_includes_credit_score_and_is_admin(): void
     {
-        $user = User::factory()->create(['credit_score' => 100]);
-
-        $this->actingAs($user)
-            ->postJson('/api/shopkeeper/apply')
-            ->assertStatus(422)
-            ->assertJsonPath('eligible', false)
-            ->assertJsonPath('remaining_credit', 9900);
-    }
-
-    public function test_apply_upgrades_role_when_eligible(): void
-    {
-        $user = User::factory()->create(['credit_score' => 10_000]);
-
-        $this->actingAs($user)
-            ->postJson('/api/shopkeeper/apply')
-            ->assertOk()
-            ->assertJsonPath('eligible', true)
-            ->assertJsonPath('user.role', User::ROLE_SHOPKEEPER);
-
-        $this->assertTrue($user->fresh()->isShopkeeper());
-    }
-
-    public function test_apply_noop_when_already_shopkeeper(): void
-    {
-        $user = User::factory()->create([
-            'credit_score' => 50_000,
-            'role' => User::ROLE_SHOPKEEPER,
-        ]);
-
-        $this->actingAs($user)
-            ->postJson('/api/shopkeeper/apply')
-            ->assertOk()
-            ->assertJsonPath('eligible', false)
-            ->assertJsonPath('remaining_credit', 0);
-
-        $this->assertSame(User::ROLE_SHOPKEEPER, (int) $user->fresh()->role);
-    }
-
-    public function test_me_includes_credit_score_and_shopkeeper_eligibility(): void
-    {
-        $user = User::factory()->create(['credit_score' => 500]);
+        $user = User::factory()->create(['credit_score' => 500, 'role' => User::ROLE_USER]);
 
         $this->actingAs($user)
             ->getJson('/api/me')
             ->assertOk()
             ->assertJsonPath('user.credit_score', 500)
-            ->assertJsonPath('user.is_shopkeeper', false)
-            ->assertJsonPath('user.shopkeeper_eligibility.threshold', 10_000)
-            ->assertJsonPath('user.shopkeeper_eligibility.eligible', false)
-            ->assertJsonPath('user.shopkeeper_eligibility.remaining_credit', 9500);
+            ->assertJsonPath('user.role', User::ROLE_USER)
+            ->assertJsonPath('user.is_admin', false);
+    }
+
+    public function test_me_is_admin_true_for_admin_role(): void
+    {
+        $admin = User::factory()->create(['role' => User::ROLE_ADMIN]);
+
+        $this->actingAs($admin)
+            ->getJson('/api/me')
+            ->assertOk()
+            ->assertJsonPath('user.is_admin', true)
+            ->assertJsonPath('user.role', User::ROLE_ADMIN);
+    }
+
+    public function test_removed_apply_route_returns_not_found(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->postJson('/api/shopkeeper/apply')
+            ->assertNotFound();
     }
 
     private function createVariant(int $stock, string $price): ProductVariant
@@ -143,7 +115,7 @@ class ShopkeeperCreditTest extends TestCase
             'price' => $price,
             'price_mmk' => MmkMoney::usdDecimalToMmk($price),
             'stock' => $stock,
-            'sku' => 'TEST-' . $stock . '-' . uniqid(),
+            'sku' => 'TEST-'.$stock.'-'.uniqid(),
         ]);
     }
 

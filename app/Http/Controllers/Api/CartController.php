@@ -13,6 +13,8 @@ class CartController extends Controller
 {
     public function index(Request $request)
     {
+        $this->assertPurchasableUser($request);
+
         $cart = $this->userCart($request);
         $items = $cart->items()->with('variant.product')->get();
 
@@ -30,6 +32,8 @@ class CartController extends Controller
 
     public function store(Request $request)
     {
+        $this->assertPurchasableUser($request);
+
         $validated = $request->validate([
             'variant_id' => 'required|exists:product_variants,id',
             'quantity' => 'nullable|integer|min:1',
@@ -67,6 +71,7 @@ class CartController extends Controller
 
     public function update(CartItem $cartItem, Request $request)
     {
+        $this->assertPurchasableUser($request);
         $this->authorizeItem($cartItem, $request);
 
         $validated = $request->validate([
@@ -84,6 +89,7 @@ class CartController extends Controller
 
     public function destroy(CartItem $cartItem, Request $request)
     {
+        $this->assertPurchasableUser($request);
         $this->authorizeItem($cartItem, $request);
         $cartItem->delete();
 
@@ -98,5 +104,10 @@ class CartController extends Controller
     private function authorizeItem(CartItem $cartItem, Request $request): void
     {
         abort_unless($cartItem->cart->user_id === $request->user()->id, 403);
+    }
+
+    private function assertPurchasableUser(Request $request): void
+    {
+        abort_if($request->user()?->isAdmin(), 403, 'Admins cannot use cart or checkout.');
     }
 }

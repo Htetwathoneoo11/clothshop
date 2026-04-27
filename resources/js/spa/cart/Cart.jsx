@@ -10,17 +10,26 @@ export default function Cart() {
     const [items, setItems] = useState([]);
     const [subtotalMmk, setSubtotalMmk] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
     const [updatingId, setUpdatingId] = useState(null);
     const { refreshCartCount } = useCart();
 
     const loadCart = () => {
         setLoading(true);
+        setError('');
         axios
             .get('/api/cart')
             .then((res) => {
                 setItems(res.data.items || []);
                 setSubtotalMmk(toIntegerMMK(res.data.subtotal_mmk));
                 refreshCartCount();
+            })
+            .catch((err) => {
+                if (err.response?.status === 403) {
+                    setError(err.response?.data?.message || 'Access denied.');
+                    setItems([]);
+                    setSubtotalMmk(0);
+                }
             })
             .finally(() => setLoading(false));
     };
@@ -71,6 +80,15 @@ export default function Cart() {
             {loading ? (
                 <div className="cart-empty-card">
                     <p className="cart-empty-title">Loading your cart...</p>
+                </div>
+            ) : error ? (
+                <div className="cart-empty-card">
+                    <p className="cart-empty-title">{error}</p>
+                    <p className="cart-empty-text">Admin accounts can preview products but cannot place orders.</p>
+                    <Link to="/dashboard" className="cart-continue-btn cart-continue-btn--empty">
+                        Continue browsing
+                        <ArrowRight size={15} aria-hidden="true" />
+                    </Link>
                 </div>
             ) : items.length === 0 ? (
                 <div className="cart-empty-card">

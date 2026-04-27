@@ -20,10 +20,10 @@ It is built as a Laravel backend API with a React single-page frontend.
 - Database: MySQL (default local setup), sqlite in-memory for tests
 - Testing: PHPUnit feature/unit tests via `php artisan test`
 
-## Credit score & Shopkeeper role
+## Credit score & user roles
 
 - **Credit score** increases by the order `total_amount_mmk` when a paid order is completed (once per order; tracked via `orders.credit_awarded_at`).
-- **Shopkeeper application**: `POST /api/shopkeeper/apply` (authenticated). Requires `credit_score` ≥ `SHOPKEEPER_CREDIT_THRESHOLD` (default **500000** MMK in `config/commerce.php`). Already a Shopkeeper → friendly success with no role change.
+- **Roles**: `User::ROLE_USER` (1) and `User::ROLE_ADMIN` (2). The `/api/me` payload includes `role` and `is_admin`.
 
 ## Currency (MMK)
 

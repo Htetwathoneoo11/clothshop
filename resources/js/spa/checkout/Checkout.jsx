@@ -39,6 +39,16 @@ export default function Checkout() {
                 setItems(res.data.items || []);
                 setSubtotalMmk(toIntegerMMK(res.data.subtotal_mmk));
             })
+            .catch((err) => {
+                if (err.response?.status === 403) {
+                    setNotice({
+                        type: 'error',
+                        text: err.response?.data?.message || 'Access denied.',
+                    });
+                    setItems([]);
+                    setSubtotalMmk(0);
+                }
+            })
             .finally(() => setLoading(false));
     }, []);
 
@@ -66,7 +76,7 @@ export default function Checkout() {
                 payment_method: paymentMethod,
             });
             setItems([]);
-            setSubtotal(0);
+            setSubtotalMmk(0);
             setNotice({
                 type: 'success',
                 text: res.data.message || 'Checkout successful. Your order is now being prepared.',

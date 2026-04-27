@@ -15,9 +15,9 @@ class User extends Authenticatable
 {
     use HasApiTokens, HasFactory, Notifiable;
 
-    public const ROLE_MEMBER = 1;
+    public const ROLE_USER = 1;
 
-    public const ROLE_SHOPKEEPER = 2;
+    public const ROLE_ADMIN = 2;
 
     /**
      * The attributes that are mass assignable.
@@ -55,38 +55,9 @@ class User extends Authenticatable
         // 'password' => 'hashed',
     ];
 
-    public function isShopkeeper(): bool
+    public function isAdmin(): bool
     {
-        return (int) $this->role === self::ROLE_SHOPKEEPER;
-    }
-
-    public function canApplyForShopkeeper(?int $threshold = null): bool
-    {
-        $threshold ??= (int) config('commerce.shopkeeper_credit_threshold');
-
-        return ! $this->isShopkeeper() && (int) $this->credit_score >= $threshold;
-    }
-
-    public function shopkeeperEligibilityPayload(): array
-    {
-        $threshold = (int) config('commerce.shopkeeper_credit_threshold');
-        $score = (int) $this->credit_score;
-
-        if ($this->isShopkeeper()) {
-            return [
-                'eligible' => false,
-                'threshold' => $threshold,
-                'remaining_credit' => 0,
-            ];
-        }
-
-        $remaining = max(0, $threshold - $score);
-
-        return [
-            'eligible' => $score >= $threshold,
-            'threshold' => $threshold,
-            'remaining_credit' => $remaining,
-        ];
+        return (int) $this->role === self::ROLE_ADMIN;
     }
 
     public function cart(): HasOne
@@ -115,10 +86,9 @@ class User extends Authenticatable
             'username' => $this->username,
             'email' => $this->email,
             'role' => $this->role,
+            'is_admin' => $this->isAdmin(),
             'status' => $this->status,
             'credit_score' => (int) $this->credit_score,
-            'is_shopkeeper' => $this->isShopkeeper(),
-            'shopkeeper_eligibility' => $this->shopkeeperEligibilityPayload(),
             'avatar_url' => $this->avatar_url,
             'last_login_at' => $this->last_login_at,
             'last_login_ip' => $this->last_login_ip,
