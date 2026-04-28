@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\EmailVerificationCode;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -12,6 +13,7 @@ use App\Support\MmkMoney;
 use InvalidArgumentException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 
 class ApiCommerceTest extends TestCase
@@ -20,6 +22,8 @@ class ApiCommerceTest extends TestCase
 
     public function test_register_and_me_flow_returns_authenticated_user(): void
     {
+        Notification::fake();
+
         $response = $this->postJson('/api/auth/register', [
             'username' => 'shopper1',
             'email' => 'shopper1@example.com',
@@ -28,10 +32,21 @@ class ApiCommerceTest extends TestCase
         ]);
 
         $response->assertCreated()
+            ->assertJsonPath('requires_verification', true)
+            ->assertJsonPath('email', 'shopper1@example.com');
+
+        $this->assertGuest();
+        $user = User::query()->where('email', 'shopper1@example.com')->firstOrFail();
+        EmailVerificationCode::query()->where('user_id', $user->id)->update([
+            'code_hash' => Hash::make('123456'),
+        ]);
+
+        $this->postJson('/api/auth/verify-email-code', [
+            'email' => 'shopper1@example.com',
+            'code' => '123456',
+        ])->assertOk()
             ->assertJsonPath('user.username', 'shopper1')
             ->assertJsonPath('user.email', 'shopper1@example.com');
-
-        $this->assertAuthenticated();
 
         $this->getJson('/api/me')
             ->assertOk()
@@ -105,6 +120,27 @@ class ApiCommerceTest extends TestCase
             'id' => $variant->id,
             'stock' => 1,
         ]);
+    }
+
+    public function test_checkout_requires_verified_email(): void
+    {
+        $user = User::factory()->unverified()->create();
+        $variant = $this->createVariant(stock: 5, price: '19.99');
+        $cart = Cart::create(['user_id' => $user->id]);
+
+        CartItem::create([
+            'cart_id' => $cart->id,
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+            'unit_price' => '19.99',
+            'unit_price_mmk' => MmkMoney::usdDecimalToMmk('19.99'),
+        ]);
+
+        $this->actingAs($user)->postJson('/api/checkout', $this->checkoutPayload())
+            ->assertStatus(403)
+            ->assertJsonPath('message', 'Please verify your email before checkout.');
+
+        $this->assertDatabaseCount('orders', 0);
     }
 
     public function test_successful_checkout_creates_order_updates_stock_and_clears_cart(): void

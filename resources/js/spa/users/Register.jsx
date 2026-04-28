@@ -46,9 +46,12 @@ export default function Register() {
         setLoading(true);
         try {
             await axios.get('/sanctum/csrf-cookie');
-            await axios.post('/api/auth/register', form);
-            await axios.get('/api/me');
-            navigate('/dashboard');
+            const res = await axios.post('/api/auth/register', form);
+            navigate('/verify-email-code', {
+                state: {
+                    email: res.data?.email || form.email,
+                },
+            });
         } catch (err) {
             const message = err.response?.data?.message;
             const fieldErrors = err.response?.data?.errors;

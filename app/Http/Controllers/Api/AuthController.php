@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\EmailVerificationCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Throwable;
 
 class AuthController extends Controller
 {
@@ -15,7 +18,9 @@ class AuthController extends Controller
         $data = $request->validate([
             'username' => ['required', 'string'],
             'password' => ['required', 'string'],
+            'remember' => ['sometimes', 'boolean'],
         ]);
+        $remember = (bool) ($data['remember'] ?? false);
 
         $login = trim($data['username']);
 
@@ -23,7 +28,9 @@ class AuthController extends Controller
         $user = User::query()
             ->where('username', $login)
             ->orWhere('email', $login)
-            ->first();
+            ->get()
+            ->first(fn (User $candidate): bool => hash_equals($candidate->username, $login)
+                || hash_equals($candidate->email, $login));
 
         if (! $user || ! Hash::check($data['password'], $user->password)) {
             // Optional legacy fallback if existing users have plaintext passwords
@@ -35,7 +42,15 @@ class AuthController extends Controller
             }
         }
 
-        Auth::guard('web')->login($user);
+        if (! $user->hasVerifiedEmail()) {
+            return response()->json([
+                'message' => 'Please verify your email before signing in.',
+                'requires_verification' => true,
+                'email' => $user->email,
+            ], 403);
+        }
+
+        Auth::guard('web')->login($user, $remember);
         if ($request->hasSession()) {
             $request->session()->regenerate();
         }
@@ -46,7 +61,7 @@ class AuthController extends Controller
         ]);
     }//login
 
-    public function register(Request $request)
+    public function register(Request $request, EmailVerificationCodeService $verificationCodes)
     {
         $data = $request->validate([
             'username' => ['required', 'string', 'max:255', 'unique:users,username'],
@@ -62,15 +77,26 @@ class AuthController extends Controller
             'status' => 1,
         ]);
 
-        Auth::guard('web')->login($user);
-        if ($request->hasSession()) {
-            $request->session()->regenerate();
+        try {
+            $verificationCodes->send($user);
+        } catch (Throwable $exception) {
+            Log::error('Registration verification code could not be sent.', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'exception' => $exception,
+            ]);
+
+            return response()->json([
+                'message' => 'Your account was created, but we could not send the verification code. Please check the Mailtrap SMTP settings and request a new code.',
+                'requires_verification' => true,
+                'email' => $user->email,
+            ], 503);
         }
-        $this->updateLoginMeta($request, $user);
 
         return response()->json([
-            'message' => 'Registration successful.',
-            'user' => $user->fresh()->toApiArray(),
+            'message' => 'Registration successful. Please enter the verification code sent to your email.',
+            'requires_verification' => true,
+            'email' => $user->email,
         ], 201);
     }
 

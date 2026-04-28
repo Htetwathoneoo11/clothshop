@@ -17,6 +17,7 @@ class CheckoutController extends Controller
     public function store(Request $request)
     {
         abort_if($request->user()?->isAdmin(), 403, 'Admins cannot use cart or checkout.');
+        abort_unless($request->user()?->hasVerifiedEmail(), 403, 'Please verify your email before checkout.');
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],

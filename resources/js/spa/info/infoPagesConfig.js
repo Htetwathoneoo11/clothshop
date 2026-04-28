@@ -5,7 +5,7 @@ export const infoPages = {
         sections: [
             {
                 heading: 'Customer support',
-                body: 'Email: support@clothshop.example - Available Monday to Friday, 9:00 to 17:00.',
+                body: 'Email: support@clothshop.com - Available Monday to Friday, 9:00 to 17:00.',
             },
             {
                 heading: 'Order assistance',

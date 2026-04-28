@@ -2,7 +2,8 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Notifications\ResetPasswordNotification;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -11,7 +12,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, Notifiable;
 
@@ -79,6 +80,11 @@ class User extends Authenticatable
         return Storage::disk('public')->url($this->avatar_path);
     }
 
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
+    }
+
     public function toApiArray(): array
     {
         return [
@@ -89,6 +95,8 @@ class User extends Authenticatable
             'is_admin' => $this->isAdmin(),
             'status' => $this->status,
             'credit_score' => (int) $this->credit_score,
+            'email_verified_at' => $this->email_verified_at,
+            'has_verified_email' => $this->hasVerifiedEmail(),
             'avatar_url' => $this->avatar_url,
             'last_login_at' => $this->last_login_at,
             'last_login_ip' => $this->last_login_ip,

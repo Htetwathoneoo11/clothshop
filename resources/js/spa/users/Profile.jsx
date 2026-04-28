@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 
 import { formatMMK } from '../utils/money.js';
+import { emitAuthChange } from '../utils/authEvents.js';
 
 axios.defaults.withCredentials = true;
 
@@ -113,6 +114,7 @@ export default function Profile() {
         } finally {
             setLogoutBusy(false);
         }
+        emitAuthChange('logout');
         navigate('/login');
     };
 
@@ -256,6 +258,21 @@ export default function Profile() {
 
             <div className="profile-layout">
                 <div className="profile-main">
+                    {!user.has_verified_email ? (
+                        <section className="profile-verify-card" aria-labelledby="verify-email-heading">
+                            <div className="profile-verify-icon" aria-hidden="true">
+                                <Mail size={20} />
+                            </div>
+                            <div className="profile-verify-copy">
+                                <h3 id="verify-email-heading">Verify your email</h3>
+                                <p>Verify {user.email} to unlock checkout and keep your account secure.</p>
+                            </div>
+                            <Link to="/verify-email-code" state={{ email: user.email }} className="profile-verify-action">
+                                Verify email
+                            </Link>
+                        </section>
+                    ) : null}
+
                     <section className="profile-card" aria-labelledby="account-heading">
                         <h3 id="account-heading" className="profile-card-title">
                             <User size={18} strokeWidth={2} aria-hidden="true" />
@@ -273,6 +290,16 @@ export default function Profile() {
                                         <Mail size={16} aria-hidden="true" />
                                         {user.email}
                                     </span>
+                                </dd>
+                            </div>
+                            <div className="profile-dl-row">
+                                <dt>Email status</dt>
+                                <dd>
+                                    {user.has_verified_email ? (
+                                        <span className="profile-badge profile-badge--ok">Verified</span>
+                                    ) : (
+                                        <span className="profile-status-unverified">Not verified</span>
+                                    )}
                                 </dd>
                             </div>
                             <div className="profile-dl-row">

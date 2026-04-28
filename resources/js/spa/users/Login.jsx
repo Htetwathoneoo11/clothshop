@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
+import { emitAuthChange } from '../utils/authEvents.js';
 
 axios.defaults.withCredentials = true;
 
 export default function Login() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [remember, setRemember] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -18,7 +20,7 @@ export default function Login() {
         setError('');
 
         if (!username.trim()) {
-            setError('Please enter your username.');
+            setError('Please enter your username or email.');
             return;
         }
         if (!password) {
@@ -30,15 +32,24 @@ export default function Login() {
 
         try {
             await axios.get('/sanctum/csrf-cookie');
-            await axios.post('/api/auth/login', { username, password });
-            await axios.get('/api/me');
+            await axios.post('/api/auth/login', { username, password, remember });
+            emitAuthChange('login');
             navigate('/dashboard');
         } catch (err) {
+            if (err.response?.status === 403 && err.response?.data?.requires_verification) {
+                navigate('/verify-email-code', {
+                    state: {
+                        email: err.response.data.email || username,
+                    },
+                });
+                return;
+            }
+
             const msg = err.response?.data?.message;
             setError(
                 typeof msg === 'string' && msg.trim()
                     ? msg
-                    : 'We could not sign you in. Check your username and password, then try again.'
+                    : 'We could not sign you in. Check your username or email and password, then try again.'
             );
         } finally {
             setLoading(false);
@@ -71,12 +82,12 @@ export default function Login() {
                             </div>
                         )}
                         <div className="form-group">
-                            <label htmlFor="login-username">Username</label>
+                            <label htmlFor="login-username">Username or email</label>
                             <input
                                 type="text"
                                 id="login-username"
                                 name="username"
-                                placeholder="Your username"
+                                placeholder="Your username or email"
                                 value={username}
                                 onChange={(e) => {
                                     setUsername(e.target.value);
@@ -126,6 +137,17 @@ export default function Login() {
                                 </button>
                             </div>
                         </div>
+                        <label className="remember-row" htmlFor="login-remember">
+                            <input
+                                type="checkbox"
+                                id="login-remember"
+                                name="remember"
+                                checked={remember}
+                                onChange={(e) => setRemember(e.target.checked)}
+                                disabled={loading}
+                            />
+                            <span>Remember me</span>
+                        </label>
                         <button type="submit" className="login-submit" disabled={loading}>
                             <span className="login-submit-inner">
                                 {loading ? (
@@ -140,6 +162,9 @@ export default function Login() {
                         </button>
                     </form>
                     <div className="login-footer login-footer--stack">
+                        <p className="login-footer-line">
+                            <Link to="/forgot-password">Forgot password?</Link>
+                        </p>
                         <p className="login-footer-line">
                             <span className="login-footer-muted">New here? </span>
                             <Link to="/register">Create an account</Link>

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { Box, Eye, House, LayoutPanelTop, ShoppingCart } from 'lucide-react';
 import { useCart } from './cart/CartContext.jsx';
+import { listenForAuthChange } from './utils/authEvents.js';
 
 
 
@@ -17,13 +18,47 @@ function initialsFromUsername(username) {
 
 export default function Navbar() {
     const [user, setUser] = useState(null);
-    const { cartCount } = useCart();
+    const { cartCount, refreshCartCount } = useCart();
     const location = useLocation();
+    const navigate = useNavigate();
+
+    const refreshUser = () => axios.get('/api/me')
+        .then((res) => {
+            const nextUser = res.data.user || null;
+            setUser(nextUser);
+            return nextUser;
+        })
+        .catch(() => {
+            setUser(null);
+            return null;
+        });
+
     useEffect(() => {
-        axios.get('/api/me')
-            .then((res) => setUser(res.data.user))
-            .catch(() => setUser(null));
+        refreshUser();
     }, [location.pathname]);
+
+    useEffect(() => listenForAuthChange(async (event) => {
+        const nextUser = await refreshUser();
+        refreshCartCount();
+
+        const path = location.pathname;
+        const isPurchasePath = path === '/cart' || path === '/checkout';
+        const isProtectedPath = isPurchasePath || path === '/profile' || path.startsWith('/admin');
+
+        if (!nextUser && isProtectedPath) {
+            navigate('/login', { replace: true });
+            return;
+        }
+
+        if (nextUser?.is_admin && isPurchasePath) {
+            navigate('/dashboard', { replace: true });
+            return;
+        }
+
+        if (nextUser && !nextUser.is_admin && path.startsWith('/admin')) {
+            navigate('/dashboard', { replace: true });
+        }
+    }), [location.pathname, navigate, refreshCartCount]);
 
     return (
         <header className="navbar">
@@ -108,6 +143,5 @@ export default function Navbar() {
         </header>
     );
 }
-
 
 

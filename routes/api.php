@@ -7,12 +7,21 @@ use App\Http\Controllers\Api\BoardController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\CartController;
 use App\Http\Controllers\Api\CheckoutController;
+use App\Http\Controllers\Api\EmailVerificationController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\ProfileController;
 
 // Public auth + catalog
 Route::post('/auth/login', [AuthController::class, 'login']);
 Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/forgot-password', [PasswordResetController::class, 'sendResetLink']);
+Route::post('/auth/validate-reset-token', [PasswordResetController::class, 'validateToken']);
+Route::post('/auth/reset-password', [PasswordResetController::class, 'reset']);
+Route::post('/auth/verify-email-code', [EmailVerificationController::class, 'verifyCode'])
+    ->middleware('throttle:10,1');
+Route::post('/auth/resend-email-code', [EmailVerificationController::class, 'resendCode'])
+    ->middleware('throttle:6,1');
 
 Route::get('/products', [ProductController::class, 'index']);
 Route::get('/products/{product}', [ProductController::class, 'show']);
@@ -62,8 +71,3 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/admin/hero-banners/{board}', [BoardController::class, 'destroy']);
     });
 });
-
-
-
-
-

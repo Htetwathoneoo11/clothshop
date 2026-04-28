@@ -8,8 +8,9 @@ It is built as a Laravel backend API with a React single-page frontend.
 - Public product catalog with search, filtering, and sorting
 - Product detail pages with size/color variant selection
 - User authentication (register, login, logout, current user)
+- Email verification with Mailtrap-delivered 6-digit OTP codes
 - Authenticated cart operations (add, update quantity, remove)
-- Checkout flow with delivery details and payment method selection
+- Checkout flow with delivery details and payment method selection for verified users
 - Order creation with stock checks and stock decrement in a transaction
 - Profile page with avatar upload/remove and order history
 
@@ -70,6 +71,11 @@ Public:
 
 - `POST /api/auth/login`
 - `POST /api/auth/register`
+- `POST /api/auth/verify-email-code`
+- `POST /api/auth/resend-email-code`
+- `POST /api/auth/forgot-password`
+- `POST /api/auth/validate-reset-token`
+- `POST /api/auth/reset-password`
 - `GET /api/products`
 - `GET /api/products/{product}`
 
@@ -132,6 +138,33 @@ Authenticated (`auth:sanctum`):
 
 Open the app in your browser (using your local Laravel URL).  
 The SPA is configured with a base path of `/clothshop`.
+
+## Mailtrap Email Setup
+
+Password reset and email verification code emails use SMTP. In `.env`, paste the SMTP username and password from your Mailtrap inbox:
+
+```env
+MAIL_MAILER=smtp
+MAIL_HOST=sandbox.smtp.mailtrap.io
+MAIL_PORT=2525
+MAIL_USERNAME=your_mailtrap_username
+MAIL_PASSWORD=your_mailtrap_password
+MAIL_ENCRYPTION=null
+MAIL_FROM_ADDRESS="noreply@clothshop.test"
+MAIL_FROM_NAME="Clothshop"
+```
+
+Make sure `APP_URL` points to the Laravel app URL that should open reset links, for example:
+
+```env
+APP_URL=http://127.0.0.1:8000
+```
+
+After changing mail or app URL settings, clear cached config:
+
+```bash
+php artisan config:clear
+```
 
 ## Running Tests
 

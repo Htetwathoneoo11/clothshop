@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import axios from 'axios';
+import { listenForAuthChange } from '../utils/authEvents.js';
 
 axios.defaults.withCredentials = true;
 
@@ -22,6 +23,10 @@ export function CartProvider({ children }) {
     useEffect(() => {
         refreshCartCount();
     }, []);
+
+    useEffect(() => listenForAuthChange(() => {
+        refreshCartCount();
+    }), []);
 
     return (
         <CartContext.Provider value={{ cartCount, refreshCartCount }}>

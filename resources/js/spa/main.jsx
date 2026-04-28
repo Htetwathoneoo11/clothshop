@@ -6,6 +6,9 @@ axios.defaults.withCredentials = true;
 import Dashboard from './Dashboard.jsx';
 import Login from './users/Login.jsx';
 import Register from './users/Register.jsx';
+import ForgotPassword from './users/ForgotPassword.jsx';
+import ResetPassword from './users/ResetPassword.jsx';
+import VerifyEmailCode from './users/VerifyEmailCode.jsx';
 import Profile from './users/Profile.jsx';
 import Navbar from './Navbar.jsx';
 import Footer from './Footer.jsx';
@@ -74,6 +77,11 @@ root.render(
                     <Route path="/products/:id" element={<ProductDetail />} />
                     <Route path="/login" element={<Login />} />
                     <Route path="/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/verify-email-code" element={<VerifyEmailCode />} />
+                    <Route path="/verify-email" element={<VerifyEmailCode />} />
+                    <Route path="/verify-email-notice" element={<VerifyEmailCode />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/admin/boards" element={<BoardsAdmin />} />
                     <Route path="/admin/products" element={<AdminProductsList />} />
@@ -107,5 +115,3 @@ root.render(
         </CartProvider>
     </BrowserRouter>
 );
-
-
