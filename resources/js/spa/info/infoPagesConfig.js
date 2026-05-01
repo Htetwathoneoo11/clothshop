@@ -51,7 +51,7 @@ export const infoPages = {
             },
             {
                 heading: 'What payment methods are available?',
-                body: 'The app currently supports cash on delivery and card on delivery.',
+                body: 'The app supports cash on delivery, card on delivery, and Stripe sandbox checkout for online test payments.',
             },
         ],
     },

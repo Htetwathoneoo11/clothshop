@@ -17,11 +17,19 @@ class Order extends Model
     public const STATUS_FAILED = 'failed';
     public const STATUS_CANCELLED = 'cancelled';
 
+    public const PAYMENT_CASH_ON_DELIVERY = 'cash_on_delivery';
+    public const PAYMENT_CARD_ON_DELIVERY = 'card_on_delivery';
+    public const PAYMENT_STRIPE_CHECKOUT = 'stripe_checkout';
+
     public const ALLOWED_STATUSES = [
         self::STATUS_PENDING,
         self::STATUS_PAID,
         self::STATUS_FAILED,
         self::STATUS_CANCELLED,
+    ];
+
+    public const ONLINE_PAYMENT_METHODS = [
+        self::PAYMENT_STRIPE_CHECKOUT,
     ];
 
     protected $fillable = [
@@ -38,12 +46,21 @@ class Order extends Model
         'township',
         'city',
         'payment_method',
+        'coupon_code',
+        'coupon_discount_percent',
+        'discount_mmk',
+        'stripe_checkout_session_id',
+        'stripe_payment_intent_id',
+        'paid_at',
         'credit_awarded_at',
     ];
 
     protected $casts = [
         'total_amount' => 'decimal:2',
         'total_amount_mmk' => 'integer',
+        'coupon_discount_percent' => 'integer',
+        'discount_mmk' => 'integer',
+        'paid_at' => 'datetime',
         'credit_awarded_at' => 'datetime',
     ];
 

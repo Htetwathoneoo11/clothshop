@@ -14,6 +14,9 @@ import {
     Camera,
     Trash2,
     Package,
+    Gift,
+    BadgePercent,
+    Gauge,
 } from 'lucide-react';
 
 import { formatMMK } from '../utils/money.js';
@@ -34,10 +37,14 @@ function formatDateTime(iso) {
 
 function orderStatusLabel(status) {
     switch (status) {
+        case 'pending':
+            return 'Awaiting payment';
         case 'paid':
             return 'Completed';
         case 'cancelled':
             return 'Cancelled';
+        case 'failed':
+            return 'Payment failed';
         default:
             return status;
     }
@@ -61,6 +68,19 @@ function statusLabel(status) {
     return status === 1 ? 'Active' : 'Restricted';
 }
 
+function couponStatusLabel(status) {
+    switch (status) {
+        case 'available':
+            return 'Available';
+        case 'used':
+            return 'Used';
+        case 'expired':
+            return 'Expired';
+        default:
+            return status || 'Unknown';
+    }
+}
+
 export default function Profile() {
     const [user, setUser] = useState(null);
     const [orders, setOrders] = useState([]);
@@ -69,6 +89,7 @@ export default function Profile() {
     const [avatarBusy, setAvatarBusy] = useState(false);
     const [avatarError, setAvatarError] = useState('');
     const [imgBroken, setImgBroken] = useState(false);
+    const [loyaltyOpen, setLoyaltyOpen] = useState(false);
     const fileRef = useRef(null);
     const navigate = useNavigate();
 
@@ -165,6 +186,15 @@ export default function Profile() {
     }
 
     const showPhoto = Boolean(user.avatar_url) && !imgBroken;
+    const loyalty = user.loyalty || {};
+    const creditScore = Number(user.credit_score || 0);
+    const thresholdMmk = Number(loyalty.threshold_mmk || 500000);
+    const remainingMmk = Number(loyalty.remaining_mmk ?? Math.max(0, thresholdMmk - creditScore));
+    const progressPercent = Math.max(0, Math.min(100, Number(loyalty.progress_percent || 0)));
+    const activeCoupon = loyalty.coupon;
+    const activeCoupons = Array.isArray(loyalty.coupons) ? loyalty.coupons : activeCoupon ? [activeCoupon] : [];
+    const couponHistory = Array.isArray(loyalty.coupon_history) ? loyalty.coupon_history : [];
+    const nextReward = loyalty.next_reward;
 
     return (
         <div className="profile-page">
@@ -176,83 +206,141 @@ export default function Profile() {
                 <div className="profile-hero-bg" aria-hidden="true" />
                 <div className="profile-hero-inner">
                     <div className="profile-hero-main-row">
-                        <div className="profile-avatar-wrap">
-                            <input
-                                ref={fileRef}
-                                type="file"
-                                accept="image/*"
-                                className="profile-photo-input"
-                                onChange={handleAvatarChange}
-                                disabled={avatarBusy}
-                                aria-label="Choose profile photo"
-                            />
-                            <button
-                                type="button"
-                                className={`profile-avatar ${showPhoto ? 'profile-avatar--photo' : ''} profile-avatar--interactive`}
-                                onClick={handleAvatarPick}
-                                disabled={avatarBusy}
-                                aria-label={showPhoto ? 'Change profile photo' : 'Add profile photo'}
-                            >
-                                {avatarBusy ? (
-                                    <Loader2
-                                        size={28}
-                                        className="profile-avatar-busy profile-sign-out-spinner"
-                                        aria-hidden="true"
-                                    />
-                                ) : showPhoto ? (
-                                    <img
-                                        src={user.avatar_url}
-                                        alt=""
-                                        className="profile-avatar-img"
-                                        onError={() => setImgBroken(true)}
-                                    />
-                                ) : (
-                                    <span className="profile-avatar-text">{initials}</span>
-                                )}
-                                {!avatarBusy ? (
-                                    <span className="profile-avatar-edit-hint" aria-hidden="true">
-                                        <Camera size={20} strokeWidth={2} />
-                                    </span>
-                                ) : null}
-                            </button>
-                            {showPhoto && !avatarBusy ? (
+                        <div className="profile-hero-identity">
+                            <div className="profile-avatar-wrap">
+                                <input
+                                    ref={fileRef}
+                                    type="file"
+                                    accept="image/*"
+                                    className="profile-photo-input"
+                                    onChange={handleAvatarChange}
+                                    disabled={avatarBusy}
+                                    aria-label="Choose profile photo"
+                                />
                                 <button
                                     type="button"
-                                    className="profile-avatar-remove"
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        handleRemoveAvatar();
-                                    }}
+                                    className={`profile-avatar ${showPhoto ? 'profile-avatar--photo' : ''} profile-avatar--interactive`}
+                                    onClick={handleAvatarPick}
                                     disabled={avatarBusy}
-                                    aria-label="Remove profile photo"
+                                    aria-label={showPhoto ? 'Change profile photo' : 'Add profile photo'}
                                 >
-                                    <Trash2 size={14} strokeWidth={2.2} aria-hidden="true" />
+                                    {avatarBusy ? (
+                                        <Loader2
+                                            size={28}
+                                            className="profile-avatar-busy profile-sign-out-spinner"
+                                            aria-hidden="true"
+                                        />
+                                    ) : showPhoto ? (
+                                        <img
+                                            src={user.avatar_url}
+                                            alt=""
+                                            className="profile-avatar-img"
+                                            onError={() => setImgBroken(true)}
+                                        />
+                                    ) : (
+                                        <span className="profile-avatar-text">{initials}</span>
+                                    )}
+                                    {!avatarBusy ? (
+                                        <span className="profile-avatar-edit-hint" aria-hidden="true">
+                                            <Camera size={20} strokeWidth={2} />
+                                        </span>
+                                    ) : null}
                                 </button>
+                                {showPhoto && !avatarBusy ? (
+                                    <button
+                                        type="button"
+                                        className="profile-avatar-remove"
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRemoveAvatar();
+                                        }}
+                                        disabled={avatarBusy}
+                                        aria-label="Remove profile photo"
+                                    >
+                                        <Trash2 size={14} strokeWidth={2.2} aria-hidden="true" />
+                                    </button>
+                                ) : null}
+                            </div>
+                            <div className="profile-hero-text">
+                                <h2 id="profile-hero-heading" className="profile-display-name">
+                                    {user.username}
+                                </h2>
+                                <p className="profile-email">{user.email}</p>
+                                <div className="profile-badges">
+                                    <span className="profile-badge profile-badge--role">
+                                        <ShieldCheck size={14} aria-hidden="true" />
+                                        {roleLabel(user.role)}
+                                    </span>
+                                    <span
+                                        className={`profile-badge profile-badge--status${user.status === 1 ? ' profile-badge--ok' : ''}`}
+                                    >
+                                        {statusLabel(user.status)}
+                                    </span>
+                                </div>
+                                {avatarError ? (
+                                    <p className="profile-photo-error" role="alert">
+                                        {avatarError}
+                                    </p>
+                                ) : null}
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            className={`profile-hero-credit-meter${activeCoupon ? ' profile-hero-credit-meter--ready' : ''}`}
+                            onClick={() => setLoyaltyOpen((state) => !state)}
+                            aria-expanded={loyaltyOpen}
+                            aria-controls="profile-loyalty-alert"
+                            aria-label="Show loyalty reward details"
+                        >
+                            <span
+                                className="profile-hero-meter-ring"
+                                style={{ '--loyalty-progress': progressPercent }}
+                                aria-hidden="true"
+                            >
+                                <span>{progressPercent}%</span>
+                            </span>
+                            <span className="profile-hero-meter-copy">
+                                <span>Credit score</span>
+                                <strong>{formatMMK(creditScore)}</strong>
+                                <small>View reward</small>
+                            </span>
+                        </button>
+                    </div>
+                    {loyaltyOpen ? (
+                        <div
+                            id="profile-loyalty-alert"
+                            className={`profile-loyalty-popover${activeCoupon ? ' profile-loyalty-popover--ready' : ''}`}
+                            role="alert"
+                        >
+                            <button
+                                type="button"
+                                className="profile-loyalty-popover-close"
+                                onClick={() => setLoyaltyOpen(false)}
+                                aria-label="Close loyalty reward message"
+                            >
+                                x
+                            </button>
+                            <div className="profile-loyalty-alert-icon" aria-hidden="true">
+                                {activeCoupon ? <BadgePercent size={20} /> : <Gift size={20} />}
+                            </div>
+                            <div className="profile-loyalty-alert-copy">
+                                <strong>{activeCoupon ? 'Your loyalty coupon is ready.' : 'Keep building credit for a reward.'}</strong>
+                                <p>
+                                    {activeCoupon
+                                        ? `${activeCoupon.code} gives ${activeCoupon.discount_percent}% off your cart. Paid orders build credit; each reward tier gives one coupon only.`
+                                        : `Reach ${formatMMK(thresholdMmk)} to unlock a one-time ${nextReward?.discount_percent || 10}% cart coupon. ${formatMMK(remainingMmk)} remaining.`}
+                                </p>
+                                <p className="profile-loyalty-alert-note">
+                                    Pending or failed payments do not increase credit score. Coupons are single-use and can be applied in the cart.
+                                </p>
+                            </div>
+                            {activeCoupon ? (
+                                <Link to="/cart" className="profile-loyalty-alert-action">
+                                    Use in cart
+                                </Link>
                             ) : null}
                         </div>
-                        <div className="profile-hero-text">
-                        <h2 id="profile-hero-heading" className="profile-display-name">
-                            {user.username}
-                        </h2>
-                        <p className="profile-email">{user.email}</p>
-                        <div className="profile-badges">
-                            <span className="profile-badge profile-badge--role">
-                                <ShieldCheck size={14} aria-hidden="true" />
-                                {roleLabel(user.role)}
-                            </span>
-                            <span
-                                className={`profile-badge profile-badge--status${user.status === 1 ? ' profile-badge--ok' : ''}`}
-                            >
-                                {statusLabel(user.status)}
-                            </span>
-                        </div>
-                        {avatarError ? (
-                            <p className="profile-photo-error" role="alert">
-                                {avatarError}
-                            </p>
-                        ) : null}
-                        </div>
-                    </div>
+                    ) : null}
                 </div>
             </section>
 
@@ -303,10 +391,64 @@ export default function Profile() {
                                 </dd>
                             </div>
                             <div className="profile-dl-row">
+                                <dt>Credit score</dt>
+                                <dd>{formatMMK(user.credit_score || 0)}</dd>
+                            </div>
+                            <div className="profile-dl-row">
                                 <dt>Member since</dt>
                                 <dd>{formatDateTime(user.created_at)}</dd>
                             </div>
                         </dl>
+                    </section>
+
+                    <section className="profile-card" aria-labelledby="coupon-history-heading">
+                        <h3 id="coupon-history-heading" className="profile-card-title">
+                            <BadgePercent size={18} strokeWidth={2} aria-hidden="true" />
+                            Coupon history
+                        </h3>
+                        <div className="profile-loyalty-summary">
+                            <div>
+                                <span>Available rewards</span>
+                                <strong>{activeCoupons.length}</strong>
+                            </div>
+                            <div>
+                                <span>Next reward</span>
+                                <strong>
+                                    {nextReward
+                                        ? `${formatMMK(nextReward.threshold_mmk)} / ${nextReward.discount_percent}%`
+                                        : 'Top tier reached'}
+                                </strong>
+                            </div>
+                        </div>
+                        <p className="profile-loyalty-help">
+                            Paid orders add to your credit score. When a tier is reached, the coupon is created once and stays here until you use it in the cart.
+                        </p>
+                        {couponHistory.length === 0 ? (
+                            <p className="profile-orders-empty">
+                                No coupons yet. Your first reward unlocks at {formatMMK(thresholdMmk)}.
+                            </p>
+                        ) : (
+                            <ul className="profile-coupon-list">
+                                {couponHistory.map((coupon) => (
+                                    <li key={coupon.id || coupon.code} className="profile-coupon">
+                                        <div className="profile-coupon-main">
+                                            <span className="profile-coupon-code">{coupon.code}</span>
+                                            <span className="profile-coupon-detail">
+                                                {coupon.discount_percent}% off after {formatMMK(coupon.threshold_mmk)}
+                                            </span>
+                                        </div>
+                                        <div className="profile-coupon-meta">
+                                            <span className={`profile-coupon-status profile-coupon-status--${coupon.status}`}>
+                                                {couponStatusLabel(coupon.status)}
+                                            </span>
+                                            {coupon.used_order_id ? (
+                                                <span className="profile-coupon-order">Order #{coupon.used_order_id}</span>
+                                            ) : null}
+                                        </div>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
                     </section>
 
                     <section className="profile-card" aria-labelledby="orders-heading">
@@ -316,7 +458,7 @@ export default function Profile() {
                         </h3>
                         {orders.length === 0 ? (
                             <p className="profile-orders-empty">
-                                No completed orders yet. When you check out, your purchases will appear here.
+                                No orders yet. When you check out, your purchases will appear here.
                             </p>
                         ) : (
                             <ul className="profile-orders-list">
@@ -338,6 +480,11 @@ export default function Profile() {
                                                 <span className="profile-order-total">
                                                     {formatMMK(order.total_amount_mmk)}
                                                 </span>
+                                                {Number(order.credit_earned_mmk || 0) > 0 ? (
+                                                    <span className="profile-order-credit">
+                                                        +{formatMMK(order.credit_earned_mmk)} credit
+                                                    </span>
+                                                ) : null}
                                             </div>
                                         </div>
                                         <ul className="profile-order-lines">

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
-import { CreditCard, Loader2, ShoppingBag, ChevronLeft, ShieldCheck, Wallet } from 'lucide-react';
+import { CreditCard, Loader2, ShoppingBag, ChevronLeft, ShieldCheck, Wallet, Landmark } from 'lucide-react';
 import { useCart } from '../cart/CartContext.jsx';
 import { formatMMK, toIntegerMMK } from '../utils/money.js';
 
@@ -10,6 +10,9 @@ axios.defaults.withCredentials = true;
 export default function Checkout() {
     const [items, setItems] = useState([]);
     const [subtotalMmk, setSubtotalMmk] = useState(0);
+    const [discountMmk, setDiscountMmk] = useState(0);
+    const [totalMmk, setTotalMmk] = useState(0);
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
     const [loading, setLoading] = useState(true);
     const [busy, setBusy] = useState(false);
     const [notice, setNotice] = useState({ type: '', text: '' });
@@ -38,6 +41,9 @@ export default function Checkout() {
             .then((res) => {
                 setItems(res.data.items || []);
                 setSubtotalMmk(toIntegerMMK(res.data.subtotal_mmk));
+                setDiscountMmk(toIntegerMMK(res.data.discount_mmk));
+                setTotalMmk(toIntegerMMK(res.data.total_mmk ?? res.data.subtotal_mmk));
+                setAppliedCoupon(res.data.applied_coupon || null);
             })
             .catch((err) => {
                 if (err.response?.status === 403) {
@@ -47,6 +53,9 @@ export default function Checkout() {
                     });
                     setItems([]);
                     setSubtotalMmk(0);
+                    setDiscountMmk(0);
+                    setTotalMmk(0);
+                    setAppliedCoupon(null);
                 }
             })
             .finally(() => setLoading(false));
@@ -77,15 +86,33 @@ export default function Checkout() {
             });
             setItems([]);
             setSubtotalMmk(0);
+            setDiscountMmk(0);
+            setTotalMmk(0);
+            setAppliedCoupon(null);
+            refreshCartCount();
+
+            if (res.data?.payment_required && res.data?.order_id) {
+                setNotice({
+                    type: 'success',
+                    text: 'Order created. Redirecting to Stripe sandbox checkout...',
+                });
+
+                const session = await axios.post(`/api/orders/${res.data.order_id}/stripe-checkout`);
+                if (!session.data?.checkout_url) {
+                    throw new Error('Stripe checkout URL was not returned.');
+                }
+                window.location.assign(session.data.checkout_url);
+                return;
+            }
+
             setNotice({
                 type: 'success',
                 text: res.data.message || 'Checkout successful. Your order is now being prepared.',
             });
-            refreshCartCount();
         } catch (err) {
             setNotice({
                 type: 'error',
-                text: err.response?.data?.message || 'Checkout failed. Please try again.',
+                text: err.response?.data?.message || err.message || 'Checkout failed. Please try again.',
             });
         } finally {
             setBusy(false);
@@ -249,6 +276,22 @@ export default function Checkout() {
                                         Card on delivery
                                     </span>
                                 </label>
+                                <label className="checkout-payment-option">
+                                    <input
+                                        type="radio"
+                                        name="payment_method"
+                                        value="stripe_checkout"
+                                        checked={paymentMethod === 'stripe_checkout'}
+                                        onChange={(event) => setPaymentMethod(event.target.value)}
+                                    />
+                                    <span className="checkout-payment-option-content">
+                                        <Landmark size={16} aria-hidden="true" />
+                                        <span>
+                                            Stripe sandbox
+                                            <small>Pay online with Stripe test cards.</small>
+                                        </span>
+                                    </span>
+                                </label>
                             </div>
                         </section>
                     </div>
@@ -283,6 +326,16 @@ export default function Checkout() {
                             <span>Subtotal</span>
                             <strong>{formatMMK(subtotalMmk)}</strong>
                         </div>
+                        {appliedCoupon && discountMmk > 0 ? (
+                            <div className="checkout-summary-row checkout-summary-row--discount">
+                                <span>{appliedCoupon.code}</span>
+                                <strong>-{formatMMK(discountMmk)}</strong>
+                            </div>
+                        ) : null}
+                        <div className="checkout-summary-row checkout-summary-row--total">
+                            <span>Total</span>
+                            <strong>{formatMMK(totalMmk || subtotalMmk)}</strong>
+                        </div>
                         <div className="checkout-secure-note">
                             <ShieldCheck size={15} aria-hidden="true" />
                             Secure checkout and stock verified before confirmation.
@@ -300,7 +353,7 @@ export default function Checkout() {
                             ) : (
                                 <>
                                     <ShoppingBag size={16} aria-hidden="true" />
-                                    Confirm Checkout
+                                    {paymentMethod === 'stripe_checkout' ? 'Continue to Stripe' : 'Confirm Checkout'}
                                 </>
                             )}
                         </button>

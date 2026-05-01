@@ -42,5 +42,10 @@ class CreditScoreService
         }
 
         $locked->forceFill(['credit_awarded_at' => now()])->save();
+
+        $user = User::query()->whereKey($locked->user_id)->first();
+        if ($user) {
+            app(CouponService::class)->ensureCreditRewardCoupon($user);
+        }
     }
 }

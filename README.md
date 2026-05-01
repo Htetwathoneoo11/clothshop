@@ -24,6 +24,9 @@ It is built as a Laravel backend API with a React single-page frontend.
 ## Credit score & user roles
 
 - **Credit score** increases by the order `total_amount_mmk` when a paid order is completed (once per order; tracked via `orders.credit_awarded_at`).
+- Checkout with on-delivery payment creates a pending order; credit is awarded only after the order is later marked paid.
+- Stripe Checkout sandbox is available for online test payments; successful Stripe payments mark orders paid and award credit.
+- At **500,000 MMK** credit score, the user receives a one-time `LOYAL10-{user_id}` coupon for **10% off** in the cart.
 - **Roles**: `User::ROLE_USER` (1) and `User::ROLE_ADMIN` (2). The `/api/me` payload includes `role` and `is_admin`.
 
 ## Currency (MMK)
@@ -166,6 +169,24 @@ After changing mail or app URL settings, clear cached config:
 php artisan config:clear
 ```
 
+## Stripe Sandbox Payment Setup
+
+Stripe Checkout sandbox uses test keys only. Add your Stripe secret key and webhook signing secret to `.env`:
+
+```env
+STRIPE_SECRET_KEY=sk_test_your_key
+STRIPE_WEBHOOK_SECRET=whsec_your_local_or_dashboard_secret
+STRIPE_CURRENCY=usd
+```
+
+Because the shop displays MMK while Stripe sandbox charges USD, the Stripe amount uses the existing legacy USD equivalent from `MMK_PER_USD`.
+
+For local webhook testing with the Stripe CLI:
+
+```bash
+stripe listen --forward-to http://127.0.0.1:8000/api/stripe/webhook
+```
+
 ## Running Tests
 
 Run all tests:
@@ -176,7 +197,7 @@ php artisan test
 
 ## Current Limitations
 
-- Payment is modeled as on-delivery options only (`cash_on_delivery`, `card_on_delivery`).
+- Online payment is Stripe sandbox only; live payments are not configured.
 - No admin dashboard for product/order management.
 - README documents current implementation only; deployment instructions are not included.
 

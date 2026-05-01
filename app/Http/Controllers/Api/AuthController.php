@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\CouponService;
 use App\Services\EmailVerificationCodeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -100,7 +101,7 @@ class AuthController extends Controller
         ], 201);
     }
 
-    public function me(Request $request)
+    public function me(Request $request, CouponService $coupons)
     {
         $user = $request->user();
 
@@ -108,8 +109,10 @@ class AuthController extends Controller
             return response()->json(['user' => null], 401);
         }
 
+        $coupons->ensureCreditRewardCoupon($user);
+
         return response()->json([
-            'user' => $user->toApiArray(),
+            'user' => $user->fresh()->toApiArray(),
         ]);
     }//me
 

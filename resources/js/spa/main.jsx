@@ -15,6 +15,7 @@ import Footer from './Footer.jsx';
 import Cart from './cart/Cart.jsx';
 import { CartProvider } from './cart/CartContext.jsx';
 import Checkout from './checkout/Checkout.jsx';
+import StripeReturn from './checkout/StripeReturn.jsx';
 import ProductDetail from './products/ProductDetail.jsx';
 import {
     ContactPage,
@@ -100,6 +101,22 @@ root.render(
                         element={(
                             <PurchaseGuard>
                                 <Checkout />
+                            </PurchaseGuard>
+                        )}
+                    />
+                    <Route
+                        path="/payment/stripe/success"
+                        element={(
+                            <PurchaseGuard>
+                                <StripeReturn />
+                            </PurchaseGuard>
+                        )}
+                    />
+                    <Route
+                        path="/payment/stripe/cancel"
+                        element={(
+                            <PurchaseGuard>
+                                <StripeReturn cancelled />
                             </PurchaseGuard>
                         )}
                     />

@@ -28,6 +28,7 @@ Route::get('/products/{product}', [ProductController::class, 'show']);
 
 Route::get('/boards/active', [BoardController::class, 'active']);
 Route::get('/hero-banner/active', [BoardController::class, 'active']);
+Route::post('/stripe/webhook', [OrderController::class, 'stripeWebhook']);
 
 // Authenticated routes
 Route::middleware('auth:sanctum')->group(function () {
@@ -37,9 +38,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
     Route::get('/orders', [OrderController::class, 'index']);
+    Route::post('/orders/stripe-confirm', [OrderController::class, 'confirmStripeCheckout']);
+    Route::get('/orders/{order}', [OrderController::class, 'show']);
+    Route::post('/orders/{order}/stripe-checkout', [OrderController::class, 'createStripeCheckoutSession']);
 
     Route::get('/cart', [CartController::class, 'index']);
     Route::post('/cart', [CartController::class, 'store']);
+    Route::post('/cart/coupon', [CartController::class, 'applyCoupon']);
+    Route::delete('/cart/coupon', [CartController::class, 'removeCoupon']);
     Route::patch('/cart/{cartItem}', [CartController::class, 'update']);
     Route::delete('/cart/{cartItem}', [CartController::class, 'destroy']);
 

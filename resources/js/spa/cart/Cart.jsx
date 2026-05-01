@@ -9,6 +9,12 @@ import { formatMMK, toIntegerMMK } from '../utils/money.js';
 export default function Cart() {
     const [items, setItems] = useState([]);
     const [subtotalMmk, setSubtotalMmk] = useState(0);
+    const [discountMmk, setDiscountMmk] = useState(0);
+    const [totalMmk, setTotalMmk] = useState(0);
+    const [availableCoupons, setAvailableCoupons] = useState([]);
+    const [appliedCoupon, setAppliedCoupon] = useState(null);
+    const [couponCode, setCouponCode] = useState('');
+    const [couponMessage, setCouponMessage] = useState({ type: '', text: '' });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [updatingId, setUpdatingId] = useState(null);
@@ -22,6 +28,11 @@ export default function Cart() {
             .then((res) => {
                 setItems(res.data.items || []);
                 setSubtotalMmk(toIntegerMMK(res.data.subtotal_mmk));
+                setDiscountMmk(toIntegerMMK(res.data.discount_mmk));
+                setTotalMmk(toIntegerMMK(res.data.total_mmk ?? res.data.subtotal_mmk));
+                setAvailableCoupons(res.data.available_coupons || []);
+                setAppliedCoupon(res.data.applied_coupon || null);
+                setCouponCode(res.data.applied_coupon?.code || '');
                 refreshCartCount();
             })
             .catch((err) => {
@@ -29,6 +40,8 @@ export default function Cart() {
                     setError(err.response?.data?.message || 'Access denied.');
                     setItems([]);
                     setSubtotalMmk(0);
+                    setDiscountMmk(0);
+                    setTotalMmk(0);
                 }
             })
             .finally(() => setLoading(false));
@@ -52,6 +65,43 @@ export default function Cart() {
         axios
             .delete(`/api/cart/${id}`)
             .then(loadCart)
+            .finally(() => setUpdatingId(null));
+    };
+
+    const applyCoupon = (event) => {
+        event.preventDefault();
+        const code = couponCode.trim();
+        if (!code) {
+            setCouponMessage({ type: 'error', text: 'Enter a coupon code.' });
+            return;
+        }
+
+        setUpdatingId('coupon');
+        setCouponMessage({ type: '', text: '' });
+        axios
+            .post('/api/cart/coupon', { code })
+            .then((res) => {
+                setCouponMessage({ type: 'success', text: res.data?.message || 'Coupon applied.' });
+                loadCart();
+            })
+            .catch((err) => {
+                setCouponMessage({
+                    type: 'error',
+                    text: err.response?.data?.message || 'Coupon could not be applied.',
+                });
+            })
+            .finally(() => setUpdatingId(null));
+    };
+
+    const removeCoupon = () => {
+        setUpdatingId('coupon');
+        setCouponMessage({ type: '', text: '' });
+        axios
+            .delete('/api/cart/coupon')
+            .then((res) => {
+                setCouponMessage({ type: 'success', text: res.data?.message || 'Coupon removed.' });
+                loadCart();
+            })
             .finally(() => setUpdatingId(null));
     };
 
@@ -170,6 +220,63 @@ export default function Cart() {
                         <div className="cart-summary-row">
                             <span>Subtotal</span>
                             <strong>{formatMMK(subtotalMmk)}</strong>
+                        </div>
+                        <div className="cart-coupon-box">
+                            <p className="cart-coupon-title">Coupon</p>
+                            {availableCoupons.length > 0 ? (
+                                <div className="cart-coupon-list">
+                                    {availableCoupons.map((coupon) => (
+                                        <button
+                                            type="button"
+                                            key={coupon.id}
+                                            className="cart-coupon-chip"
+                                            onClick={() => setCouponCode(coupon.code)}
+                                        >
+                                            {coupon.code} · {coupon.discount_percent}% off
+                                        </button>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="cart-coupon-help">Reach 500,000 MMK credit score to unlock 10% off.</p>
+                            )}
+                            <form className="cart-coupon-form" onSubmit={applyCoupon}>
+                                <input
+                                    type="text"
+                                    value={couponCode}
+                                    onChange={(event) => {
+                                        setCouponCode(event.target.value);
+                                        if (couponMessage.text) setCouponMessage({ type: '', text: '' });
+                                    }}
+                                    placeholder="Coupon code"
+                                    disabled={updatingId === 'coupon'}
+                                />
+                                <button type="submit" disabled={updatingId === 'coupon'}>
+                                    Apply
+                                </button>
+                            </form>
+                            {appliedCoupon ? (
+                                <div className="cart-coupon-applied">
+                                    <span>{appliedCoupon.code} applied</span>
+                                    <button type="button" onClick={removeCoupon} disabled={updatingId === 'coupon'}>
+                                        Remove
+                                    </button>
+                                </div>
+                            ) : null}
+                            {couponMessage.text ? (
+                                <p className={`cart-coupon-message cart-coupon-message--${couponMessage.type || 'info'}`}>
+                                    {couponMessage.text}
+                                </p>
+                            ) : null}
+                        </div>
+                        {discountMmk > 0 ? (
+                            <div className="cart-summary-row cart-summary-row--discount">
+                                <span>Discount</span>
+                                <strong>-{formatMMK(discountMmk)}</strong>
+                            </div>
+                        ) : null}
+                        <div className="cart-summary-row cart-summary-row--total">
+                            <span>Total</span>
+                            <strong>{formatMMK(totalMmk)}</strong>
                         </div>
                         <Link to="/checkout" className="cart-checkout-btn">
                             <CreditCard size={16} aria-hidden="true" />

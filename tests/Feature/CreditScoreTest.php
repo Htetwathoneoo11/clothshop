@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Cart;
 use App\Models\CartItem;
+use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -17,7 +18,7 @@ class CreditScoreTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_checkout_awards_credit_equal_to_total_amount_mmk(): void
+    public function test_checkout_does_not_award_credit_until_order_is_paid(): void
     {
         $user = User::factory()->create();
         $variant = $this->createVariant(stock: 5, price: '19.99');
@@ -35,10 +36,43 @@ class CreditScoreTest extends TestCase
 
         $this->actingAs($user)->postJson('/api/checkout', $this->checkoutPayload())->assertOk();
 
-        $this->assertSame($expected, (int) $user->fresh()->credit_score);
-
         $order = Order::query()->where('user_id', $user->id)->first();
-        $this->assertNotNull($order->credit_awarded_at);
+        $this->assertNotNull($order);
+        $this->assertSame(Order::STATUS_PENDING, $order->status);
+        $this->assertSame(0, (int) $user->fresh()->credit_score);
+        $this->assertNull($order->credit_awarded_at);
+
+        app(CreditScoreService::class)->awardForPaidOrder($order->fresh());
+        $this->assertSame(0, (int) $user->fresh()->credit_score);
+        $this->assertNull($order->fresh()->credit_awarded_at);
+
+        $order->forceFill(['status' => Order::STATUS_PAID])->save();
+        app(CreditScoreService::class)->awardForPaidOrder($order->fresh());
+
+        $this->assertSame($expected, (int) $user->fresh()->credit_score);
+        $this->assertNotNull($order->fresh()->credit_awarded_at);
+    }
+
+    public function test_paid_order_unlocks_loyalty_coupon_at_credit_threshold(): void
+    {
+        $user = User::factory()->create(['credit_score' => 490000]);
+        $order = Order::create([
+            'user_id' => $user->id,
+            'total_amount' => '10.00',
+            'total_amount_mmk' => 25000,
+            'status' => Order::STATUS_PAID,
+        ]);
+
+        app(CreditScoreService::class)->awardForPaidOrder($order);
+
+        $this->assertSame(515000, (int) $user->fresh()->credit_score);
+        $this->assertDatabaseHas('coupons', [
+            'user_id' => $user->id,
+            'code' => 'LOYAL10-'.$user->id,
+            'discount_percent' => Coupon::DISCOUNT_PERCENT,
+            'threshold_mmk' => Coupon::CREDIT_THRESHOLD_MMK,
+            'used_at' => null,
+        ]);
     }
 
     public function test_credit_is_not_double_awarded_for_same_order(): void
@@ -60,9 +94,13 @@ class CreditScoreTest extends TestCase
         $score = (int) $user->fresh()->credit_score;
         $order = Order::query()->where('user_id', $user->id)->first();
         $this->assertNotNull($order);
+        $order->forceFill(['status' => Order::STATUS_PAID])->save();
 
         app(CreditScoreService::class)->awardForPaidOrder($order->fresh());
+        $score = (int) $user->fresh()->credit_score;
+        $this->assertGreaterThan(0, $score);
 
+        app(CreditScoreService::class)->awardForPaidOrder($order->fresh());
         $this->assertSame($score, (int) $user->fresh()->credit_score);
     }
 
@@ -74,8 +112,53 @@ class CreditScoreTest extends TestCase
             ->getJson('/api/me')
             ->assertOk()
             ->assertJsonPath('user.credit_score', 500)
+            ->assertJsonPath('user.loyalty.threshold_mmk', Coupon::CREDIT_THRESHOLD_MMK)
+            ->assertJsonPath('user.loyalty.remaining_mmk', Coupon::CREDIT_THRESHOLD_MMK - 500)
+            ->assertJsonPath('user.loyalty.reward_unlocked', false)
             ->assertJsonPath('user.role', User::ROLE_USER)
             ->assertJsonPath('user.is_admin', false);
+    }
+
+    public function test_me_creates_and_returns_loyalty_coupon_after_threshold(): void
+    {
+        $user = User::factory()->create(['credit_score' => Coupon::CREDIT_THRESHOLD_MMK]);
+
+        $this->actingAs($user)
+            ->getJson('/api/me')
+            ->assertOk()
+            ->assertJsonPath('user.loyalty.reward_unlocked', true)
+            ->assertJsonPath('user.loyalty.coupon.code', 'LOYAL10-'.$user->id)
+            ->assertJsonPath('user.loyalty.coupon.discount_percent', Coupon::DISCOUNT_PERCENT)
+            ->assertJsonPath('user.loyalty.coupon_history.0.status', 'available');
+    }
+
+    public function test_reward_tiers_create_one_coupon_per_threshold(): void
+    {
+        $user = User::factory()->create(['credit_score' => 990000]);
+        $order = Order::create([
+            'user_id' => $user->id,
+            'total_amount' => '20.00',
+            'total_amount_mmk' => 20000,
+            'status' => Order::STATUS_PAID,
+        ]);
+
+        app(CreditScoreService::class)->awardForPaidOrder($order);
+        app(CreditScoreService::class)->awardForPaidOrder($order->fresh());
+
+        $this->assertSame(1010000, (int) $user->fresh()->credit_score);
+        $this->assertDatabaseHas('coupons', [
+            'user_id' => $user->id,
+            'code' => 'LOYAL10-'.$user->id,
+            'discount_percent' => 10,
+            'threshold_mmk' => 500000,
+        ]);
+        $this->assertDatabaseHas('coupons', [
+            'user_id' => $user->id,
+            'code' => 'LOYAL15-'.$user->id,
+            'discount_percent' => 15,
+            'threshold_mmk' => 1000000,
+        ]);
+        $this->assertSame(2, Coupon::query()->where('user_id', $user->id)->count());
     }
 
     public function test_me_is_admin_true_for_admin_role(): void
