@@ -9,6 +9,7 @@ import Register from './users/Register.jsx';
 import ForgotPassword from './users/ForgotPassword.jsx';
 import ResetPassword from './users/ResetPassword.jsx';
 import VerifyEmailCode from './users/VerifyEmailCode.jsx';
+import StaffInvitationAccept from './users/StaffInvitationAccept.jsx';
 import Profile from './users/Profile.jsx';
 import Navbar from './Navbar.jsx';
 import Footer from './Footer.jsx';
@@ -26,6 +27,14 @@ import {
     TermsPage,
 } from './info/InfoPages.jsx';
 import BoardsAdmin from './admin/BoardsAdmin.jsx';
+import AdminDashboard from './admin/AdminDashboard.jsx';
+import AdminOrders from './admin/AdminOrders.jsx';
+import AdminUsers from './admin/AdminUsers.jsx';
+import AdminAuditLogs from './admin/AdminAuditLogs.jsx';
+import AdminCoupons from './admin/AdminCoupons.jsx';
+import AdminInventory from './admin/AdminInventory.jsx';
+import AdminNotifications from './admin/AdminNotifications.jsx';
+import AdminReports from './admin/AdminReports.jsx';
 import AdminProductsList from './admin/AdminProductsList.jsx';
 import AdminProductCreate from './admin/AdminProductCreate.jsx';
 import AdminProductEdit from './admin/AdminProductEdit.jsx';
@@ -83,7 +92,22 @@ root.render(
                     <Route path="/verify-email-code" element={<VerifyEmailCode />} />
                     <Route path="/verify-email" element={<VerifyEmailCode />} />
                     <Route path="/verify-email-notice" element={<VerifyEmailCode />} />
+                    <Route path="/staff-invitation/accept" element={<StaffInvitationAccept />} />
                     <Route path="/profile" element={<Profile />} />
+                    <Route path="/admin" element={<AdminDashboard />} />
+                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    <Route path="/admin/orders" element={<AdminOrders />} />
+                    <Route path="/admin/orders/:id" element={<AdminOrders />} />
+                    <Route path="/admin/users" element={<AdminUsers />} />
+                    <Route path="/admin/users/:id" element={<AdminUsers />} />
+                    <Route path="/admin/audit-logs" element={<AdminAuditLogs />} />
+                    <Route path="/admin/audit-logs/:id" element={<AdminAuditLogs />} />
+                    <Route path="/admin/coupons" element={<AdminCoupons />} />
+                    <Route path="/admin/coupons/:id" element={<AdminCoupons />} />
+                    <Route path="/admin/inventory" element={<AdminInventory />} />
+                    <Route path="/admin/inventory/:id" element={<AdminInventory />} />
+                    <Route path="/admin/notifications" element={<AdminNotifications />} />
+                    <Route path="/admin/reports" element={<AdminReports />} />
                     <Route path="/admin/boards" element={<BoardsAdmin />} />
                     <Route path="/admin/products" element={<AdminProductsList />} />
                     <Route path="/admin/products/create" element={<AdminProductCreate />} />

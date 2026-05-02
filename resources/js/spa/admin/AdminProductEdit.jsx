@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { formatMMK } from '../utils/money.js';
+import { AdminAccessState, AdminErrorNotice } from './AdminRecovery.jsx';
 
 const CATEGORY_OPTIONS = [
     'General',
@@ -81,7 +82,7 @@ export default function AdminProductEdit() {
                 const user = me.data?.user;
                 if (cancelled) return;
                 if (!user) return setGate('unauthenticated');
-                if (!user.is_admin) return setGate('forbidden');
+                if (!user.permissions?.manage_catalog) return setGate('forbidden');
                 setGate('admin');
                 await loadProduct();
             } catch {
@@ -224,8 +225,16 @@ export default function AdminProductEdit() {
     };
 
     if (gate === 'loading') return <div className="page-container admin-products-page">Loading...</div>;
-    if (gate === 'unauthenticated') return <NavigateLogin />;
-    if (gate === 'forbidden') return <NavigateForbidden />;
+    if (gate === 'unauthenticated') {
+        return <AdminAccessState type="unauthenticated">Sign in with an admin account to edit products and variants.</AdminAccessState>;
+    }
+    if (gate === 'forbidden') {
+        return (
+            <AdminAccessState>
+                Your current role cannot edit products. Ask a Super Admin for Inventory Admin, Manager, or Super Admin access.
+            </AdminAccessState>
+        );
+    }
 
     return (
         <div className="page-container admin-products-page">
@@ -239,7 +248,11 @@ export default function AdminProductEdit() {
                 </div>
             </div>
 
-            {error ? <p className="admin-products-notice admin-products-notice--err">{error}</p> : null}
+            {error ? (
+                <AdminErrorNotice onRetry={loading || !product ? loadProduct : null}>
+                    {error}
+                </AdminErrorNotice>
+            ) : null}
             {notice ? <p className="admin-products-notice admin-products-notice--ok">{notice}</p> : null}
             {loading || !form || !product ? <p>Loading product...</p> : (
                 <>
@@ -342,24 +355,6 @@ export default function AdminProductEdit() {
                     </section>
                 </>
             )}
-        </div>
-    );
-}
-
-function NavigateLogin() {
-    return (
-        <div className="page-container admin-products-page">
-            <p>Sign in as admin to manage products.</p>
-            <Link to="/login">Go to login</Link>
-        </div>
-    );
-}
-
-function NavigateForbidden() {
-    return (
-        <div className="page-container admin-products-page">
-            <p>Access denied.</p>
-            <Link to="/dashboard">View as customer</Link>
         </div>
     );
 }

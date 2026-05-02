@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import {
+    Activity,
     User,
     Mail,
     LogOut,
@@ -16,7 +17,13 @@ import {
     Package,
     Gift,
     BadgePercent,
+    BarChart3,
+    Bell,
+    Box,
+    ClipboardList,
     Gauge,
+    LayoutPanelTop,
+    Warehouse,
 } from 'lucide-react';
 
 import { formatMMK } from '../utils/money.js';
@@ -60,7 +67,10 @@ function initialsFromUser(user) {
 }
 
 function roleLabel(role) {
-    if (role === 2) return 'Admin';
+    if (role === 2) return 'Super Admin';
+    if (role === 3) return 'Manager';
+    if (role === 4) return 'Support';
+    if (role === 5) return 'Inventory Admin';
     return 'User';
 }
 
@@ -80,6 +90,31 @@ function couponStatusLabel(status) {
             return status || 'Unknown';
     }
 }
+
+const ADMIN_PERMISSION_LABELS = [
+    ['manage_users', 'Users and staff'],
+    ['manage_orders', 'Orders'],
+    ['manage_catalog', 'Catalog'],
+    ['manage_inventory', 'Inventory'],
+    ['manage_marketing', 'Marketing boards'],
+    ['manage_loyalty', 'Coupons and loyalty'],
+    ['view_audit', 'Audit logs'],
+    ['view_reports', 'Reports'],
+    ['view_notifications', 'Notifications'],
+];
+
+const ADMIN_QUICK_LINKS = [
+    ['Admin dashboard', '/admin', Gauge],
+    ['Orders', '/admin/orders', ClipboardList, 'manage_orders'],
+    ['Users and staff', '/admin/users', User, 'manage_users'],
+    ['Audit logs', '/admin/audit-logs', Activity, 'view_audit'],
+    ['Coupons', '/admin/coupons', BadgePercent, 'manage_loyalty'],
+    ['Inventory', '/admin/inventory', Warehouse, 'manage_inventory'],
+    ['Reports', '/admin/reports', BarChart3, 'view_reports'],
+    ['Notifications', '/admin/notifications', Bell, 'view_notifications'],
+    ['Products', '/admin/products', Box, 'manage_catalog'],
+    ['Boards', '/admin/boards', LayoutPanelTop, 'manage_marketing'],
+];
 
 export default function Profile() {
     const [user, setUser] = useState(null);
@@ -195,11 +230,19 @@ export default function Profile() {
     const activeCoupons = Array.isArray(loyalty.coupons) ? loyalty.coupons : activeCoupon ? [activeCoupon] : [];
     const couponHistory = Array.isArray(loyalty.coupon_history) ? loyalty.coupon_history : [];
     const nextReward = loyalty.next_reward;
+    const isAdmin = Boolean(user.is_admin);
+    const can = (permission) => Boolean(user.permissions?.[permission] ?? isAdmin);
 
     return (
         <div className="profile-page">
             <header className="profile-header">
-                <h1 className="profile-title">Profile</h1>
+                <p className="profile-eyebrow">{isAdmin ? 'Admin account' : 'Customer account'}</p>
+                <h1 className="profile-title">{isAdmin ? 'Admin profile' : 'Profile'}</h1>
+                <p className="profile-lede">
+                    {isAdmin
+                        ? 'Review your admin role, permissions, and admin shortcuts.'
+                        : 'Review your account, rewards, and recent orders.'}
+                </p>
             </header>
 
             <section className="profile-hero" aria-labelledby="profile-hero-heading">
@@ -284,29 +327,42 @@ export default function Profile() {
                                 ) : null}
                             </div>
                         </div>
-                        <button
-                            type="button"
-                            className={`profile-hero-credit-meter${activeCoupon ? ' profile-hero-credit-meter--ready' : ''}`}
-                            onClick={() => setLoyaltyOpen((state) => !state)}
-                            aria-expanded={loyaltyOpen}
-                            aria-controls="profile-loyalty-alert"
-                            aria-label="Show loyalty reward details"
-                        >
-                            <span
-                                className="profile-hero-meter-ring"
-                                style={{ '--loyalty-progress': progressPercent }}
-                                aria-hidden="true"
+                        {isAdmin ? (
+                            <Link to="/admin" className="profile-hero-admin-meter">
+                                <span className="profile-hero-admin-icon" aria-hidden="true">
+                                    <Gauge size={24} />
+                                </span>
+                                <span className="profile-hero-meter-copy">
+                                    <span>Admin access</span>
+                                    <strong>{user.role_label || roleLabel(user.role)}</strong>
+                                    <small>Open dashboard</small>
+                                </span>
+                            </Link>
+                        ) : (
+                            <button
+                                type="button"
+                                className={`profile-hero-credit-meter${activeCoupon ? ' profile-hero-credit-meter--ready' : ''}`}
+                                onClick={() => setLoyaltyOpen((state) => !state)}
+                                aria-expanded={loyaltyOpen}
+                                aria-controls="profile-loyalty-alert"
+                                aria-label="Show loyalty reward details"
                             >
-                                <span>{progressPercent}%</span>
-                            </span>
-                            <span className="profile-hero-meter-copy">
-                                <span>Credit score</span>
-                                <strong>{formatMMK(creditScore)}</strong>
-                                <small>View reward</small>
-                            </span>
-                        </button>
+                                <span
+                                    className="profile-hero-meter-ring"
+                                    style={{ '--loyalty-progress': progressPercent }}
+                                    aria-hidden="true"
+                                >
+                                    <span>{progressPercent}%</span>
+                                </span>
+                                <span className="profile-hero-meter-copy">
+                                    <span>Credit score</span>
+                                    <strong>{formatMMK(creditScore)}</strong>
+                                    <small>View reward</small>
+                                </span>
+                            </button>
+                        )}
                     </div>
-                    {loyaltyOpen ? (
+                    {loyaltyOpen && !isAdmin ? (
                         <div
                             id="profile-loyalty-alert"
                             className={`profile-loyalty-popover${activeCoupon ? ' profile-loyalty-popover--ready' : ''}`}
@@ -392,7 +448,7 @@ export default function Profile() {
                             </div>
                             <div className="profile-dl-row">
                                 <dt>Credit score</dt>
-                                <dd>{formatMMK(user.credit_score || 0)}</dd>
+                                <dd>{isAdmin ? 'Not used for admin accounts' : formatMMK(user.credit_score || 0)}</dd>
                             </div>
                             <div className="profile-dl-row">
                                 <dt>Member since</dt>
@@ -401,6 +457,30 @@ export default function Profile() {
                         </dl>
                     </section>
 
+                    {isAdmin ? (
+                        <section className="profile-card" aria-labelledby="admin-access-heading">
+                            <h3 id="admin-access-heading" className="profile-card-title">
+                                <ShieldCheck size={18} strokeWidth={2} aria-hidden="true" />
+                                Admin access
+                            </h3>
+                            <div className="profile-admin-role-card">
+                                <span>{user.role_label || roleLabel(user.role)}</span>
+                                <strong>{Object.values(user.permissions || {}).filter(Boolean).length} active permissions</strong>
+                                <p>Permissions are managed from the central admin role matrix.</p>
+                            </div>
+                            <div className="profile-admin-permission-grid">
+                                {ADMIN_PERMISSION_LABELS.map(([key, label]) => (
+                                    <span
+                                        key={key}
+                                        className={`profile-admin-permission ${can(key) ? 'profile-admin-permission--yes' : 'profile-admin-permission--no'}`}
+                                    >
+                                        {label}
+                                    </span>
+                                ))}
+                            </div>
+                        </section>
+                    ) : (
+                        <>
                     <section className="profile-card" aria-labelledby="coupon-history-heading">
                         <h3 id="coupon-history-heading" className="profile-card-title">
                             <BadgePercent size={18} strokeWidth={2} aria-hidden="true" />
@@ -510,27 +590,43 @@ export default function Profile() {
                             </ul>
                         )}
                     </section>
+                        </>
+                    )}
                 </div>
 
                 <aside className="profile-aside" aria-label="Quick actions">
                     <div className="profile-card profile-card--sticky">
                         <h3 className="profile-card-title profile-card-title--plain">Quick links</h3>
-                        <nav className="profile-quick-nav" aria-label="Shopping shortcuts">
-                            <Link className="profile-quick-link" to="/dashboard">
-                                <ShoppingBag size={18} aria-hidden="true" />
-                                <span>Continue shopping</span>
-                                <ChevronRight size={18} className="profile-quick-chevron" aria-hidden="true" />
-                            </Link>
-                            <Link className="profile-quick-link" to="/cart">
-                                <ShoppingCart size={18} aria-hidden="true" />
-                                <span>View cart</span>
-                                <ChevronRight size={18} className="profile-quick-chevron" aria-hidden="true" />
-                            </Link>
-                            <Link className="profile-quick-link" to="/checkout">
-                                <CreditCard size={18} aria-hidden="true" />
-                                <span>Checkout</span>
-                                <ChevronRight size={18} className="profile-quick-chevron" aria-hidden="true" />
-                            </Link>
+                        <nav className="profile-quick-nav" aria-label={isAdmin ? 'Admin shortcuts' : 'Shopping shortcuts'}>
+                            {isAdmin ? (
+                                ADMIN_QUICK_LINKS
+                                    .filter(([, , , permission]) => !permission || can(permission))
+                                    .map(([label, to, Icon]) => (
+                                        <Link key={to} className="profile-quick-link" to={to}>
+                                            <Icon size={18} aria-hidden="true" />
+                                            <span>{label}</span>
+                                            <ChevronRight size={18} className="profile-quick-chevron" aria-hidden="true" />
+                                        </Link>
+                                    ))
+                            ) : (
+                                <>
+                                    <Link className="profile-quick-link" to="/dashboard">
+                                        <ShoppingBag size={18} aria-hidden="true" />
+                                        <span>Continue shopping</span>
+                                        <ChevronRight size={18} className="profile-quick-chevron" aria-hidden="true" />
+                                    </Link>
+                                    <Link className="profile-quick-link" to="/cart">
+                                        <ShoppingCart size={18} aria-hidden="true" />
+                                        <span>View cart</span>
+                                        <ChevronRight size={18} className="profile-quick-chevron" aria-hidden="true" />
+                                    </Link>
+                                    <Link className="profile-quick-link" to="/checkout">
+                                        <CreditCard size={18} aria-hidden="true" />
+                                        <span>Checkout</span>
+                                        <ChevronRight size={18} className="profile-quick-chevron" aria-hidden="true" />
+                                    </Link>
+                                </>
+                            )}
                         </nav>
                         <button
                             type="button"

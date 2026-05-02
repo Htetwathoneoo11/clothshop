@@ -40,6 +40,11 @@ class Coupon extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function usedOrder(): BelongsTo
+    {
+        return $this->belongsTo(Order::class, 'used_order_id');
+    }
+
     public function isUsable(): bool
     {
         return $this->used_at === null

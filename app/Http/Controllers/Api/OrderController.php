@@ -3,15 +3,185 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminActivityLog;
+use App\Models\Board;
 use App\Models\Order;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\User;
+use App\Support\AdminAudit;
 use App\Services\CreditScoreService;
 use App\Services\StripeCheckoutService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use RuntimeException;
 
 class OrderController extends Controller
 {
+    public function adminDashboard()
+    {
+        $lowStockThreshold = 5;
+
+        $orderCounts = Order::query()
+            ->select('status', DB::raw('count(*) as aggregate'))
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        $recentOrders = Order::query()
+            ->with(['user', 'items.variant.product'])
+            ->orderByDesc('created_at')
+            ->limit(5)
+            ->get()
+            ->map(fn (Order $order) => $this->serializeAdminOrder($order))
+            ->values();
+
+        $recentActivity = AdminActivityLog::query()
+            ->with('actor')
+            ->orderByDesc('created_at')
+            ->limit(8)
+            ->get()
+            ->map(fn (AdminActivityLog $log) => $this->serializeAdminActivity($log))
+            ->values();
+
+        return response()->json([
+            'metrics' => [
+                'products' => [
+                    'total' => Product::query()->count(),
+                    'active' => Product::query()->where('is_active', true)->count(),
+                    'inactive' => Product::query()->where('is_active', false)->count(),
+                ],
+                'inventory' => [
+                    'low_stock_variants' => ProductVariant::query()
+                        ->where('stock', '>', 0)
+                        ->where('stock', '<=', $lowStockThreshold)
+                        ->count(),
+                    'out_of_stock_variants' => ProductVariant::query()->where('stock', 0)->count(),
+                ],
+                'orders' => [
+                    'total' => Order::query()->count(),
+                    'pending' => (int) ($orderCounts[Order::STATUS_PENDING] ?? 0),
+                    'paid' => (int) ($orderCounts[Order::STATUS_PAID] ?? 0),
+                    'failed' => (int) ($orderCounts[Order::STATUS_FAILED] ?? 0),
+                    'cancelled' => (int) ($orderCounts[Order::STATUS_CANCELLED] ?? 0),
+                    'paid_revenue_mmk' => (int) Order::query()
+                        ->where('status', Order::STATUS_PAID)
+                        ->sum('total_amount_mmk'),
+                ],
+                'boards' => [
+                    'total' => Board::query()->count(),
+                    'active' => Board::query()->where('is_active', true)->count(),
+                ],
+                'users' => [
+                    'total' => User::query()->count(),
+                    'customers' => User::query()->where('role', User::ROLE_USER)->count(),
+                    'admins' => User::query()->whereIn('role', User::ADMIN_ROLES)->count(),
+                ],
+            ],
+            'recent_orders' => $recentOrders,
+            'recent_activity' => $recentActivity,
+        ]);
+    }
+
+    public function adminIndex(Request $request)
+    {
+        $search = trim((string) $request->query('q', ''));
+        $status = trim((string) $request->query('status', 'all'));
+        $payment = trim((string) $request->query('payment', 'all'));
+        $sort = trim((string) $request->query('sort', 'newest'));
+        $perPage = max(1, min(30, (int) $request->query('per_page', 10)));
+
+        $orders = Order::query()
+            ->with(['user', 'items.variant.product'])
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                $query->where(function (Builder $subQuery) use ($search): void {
+                    if (ctype_digit($search)) {
+                        $subQuery->where('id', (int) $search);
+                    }
+
+                    $subQuery->orWhere('name', 'like', '%'.$search.'%')
+                        ->orWhere('phone_number', 'like', '%'.$search.'%')
+                        ->orWhere('city', 'like', '%'.$search.'%')
+                        ->orWhereHas('user', function (Builder $userQuery) use ($search): void {
+                            $userQuery->where('username', 'like', '%'.$search.'%')
+                                ->orWhere('email', 'like', '%'.$search.'%');
+                        });
+                });
+            })
+            ->when(in_array($status, Order::ALLOWED_STATUSES, true), fn (Builder $query) => $query->where('status', $status))
+            ->when($payment !== 'all' && $payment !== '', fn (Builder $query) => $query->where('payment_method', $payment));
+
+        $this->applyAdminOrderSort($orders, $sort);
+
+        $paginated = $orders->paginate($perPage)->withQueryString();
+
+        return response()->json([
+            'orders' => collect($paginated->items())
+                ->map(fn (Order $order) => $this->serializeAdminOrder($order))
+                ->values()
+                ->all(),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
+            ],
+            'filters' => [
+                'q' => $search,
+                'status' => $status,
+                'payment' => $payment,
+                'sort' => $sort,
+            ],
+        ]);
+    }
+
+    public function adminShow(Order $order)
+    {
+        return response()->json([
+            'order' => $this->serializeAdminOrder($order->load(['user', 'items.variant.product'])),
+        ]);
+    }
+
+    public function adminUpdateStatus(Request $request, Order $order, CreditScoreService $creditScore)
+    {
+        $validated = $request->validate([
+            'status' => ['required', Rule::in(Order::ALLOWED_STATUSES)],
+        ]);
+
+        $before = $this->serializeAdminOrder($order->load(['user', 'items.variant.product']));
+
+        DB::transaction(function () use ($order, $validated, $creditScore): void {
+            $locked = Order::query()->whereKey($order->id)->lockForUpdate()->firstOrFail();
+            $locked->forceFill([
+                'status' => $validated['status'],
+                'paid_at' => $validated['status'] === Order::STATUS_PAID
+                    ? ($locked->paid_at ?: now())
+                    : $locked->paid_at,
+            ])->save();
+
+            if ($validated['status'] === Order::STATUS_PAID) {
+                $creditScore->awardForPaidOrder($locked->fresh());
+            }
+        });
+
+        $afterOrder = $order->fresh(['user', 'items.variant.product']);
+        $after = $this->serializeAdminOrder($afterOrder);
+
+        AdminAudit::record(
+            $request,
+            'order.status_update',
+            'order',
+            $order->id,
+            $before,
+            $after
+        );
+
+        return response()->json([
+            'order' => $after,
+        ]);
+    }
+
     public function index(Request $request)
     {
         $orders = Order::query()
@@ -188,6 +358,62 @@ class OrderController extends Controller
                 ];
             })->values()->all(),
         ];
+    }
+
+    private function serializeAdminOrder(Order $order): array
+    {
+        $payload = $this->serializeOrder($order);
+        $user = $order->user;
+
+        $payload['customer'] = $user ? [
+            'id' => $user->id,
+            'username' => $user->username,
+            'email' => $user->email,
+            'credit_score' => (int) $user->credit_score,
+        ] : null;
+
+        return $payload;
+    }
+
+    private function serializeAdminActivity(AdminActivityLog $log): array
+    {
+        return [
+            'id' => $log->id,
+            'actor' => $log->actor ? [
+                'id' => $log->actor->id,
+                'username' => $log->actor->username,
+                'email' => $log->actor->email,
+            ] : null,
+            'action' => $log->action,
+            'target_type' => $log->target_type,
+            'target_id' => $log->target_id,
+            'created_at' => $log->created_at?->toIso8601String(),
+        ];
+    }
+
+    private function applyAdminOrderSort(Builder $query, string $sort): void
+    {
+        if ($sort === 'oldest') {
+            $query->orderBy('id');
+            return;
+        }
+
+        if ($sort === 'total_desc') {
+            $query->orderByDesc('total_amount_mmk')->orderByDesc('id');
+            return;
+        }
+
+        if ($sort === 'total_asc') {
+            $query->orderBy('total_amount_mmk')->orderByDesc('id');
+            return;
+        }
+
+        if ($sort === 'delivery_asc') {
+            $query->orderBy('delivery_date')->orderBy('delivery_time')->orderByDesc('id');
+            return;
+        }
+
+        $query->orderByDesc('id');
     }
 
     private function orderFromStripeSession(array $session): ?Order

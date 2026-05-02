@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
+import { AdminAccessState, AdminErrorNotice } from './AdminRecovery.jsx';
 
 const CATEGORY_OPTIONS = [
     'General',
@@ -47,7 +48,7 @@ export default function AdminProductCreate() {
                 const user = res.data?.user;
                 if (cancelled) return;
                 if (!user) return setGate('unauthenticated');
-                if (!user.is_admin) return setGate('forbidden');
+                if (!user.permissions?.manage_catalog) return setGate('forbidden');
                 setGate('admin');
             })
             .catch(() => {
@@ -101,8 +102,16 @@ export default function AdminProductCreate() {
     };
 
     if (gate === 'loading') return <div className="page-container admin-products-page">Loading...</div>;
-    if (gate === 'unauthenticated') return <NavigateLogin />;
-    if (gate === 'forbidden') return <NavigateForbidden />;
+    if (gate === 'unauthenticated') {
+        return <AdminAccessState type="unauthenticated">Sign in with an admin account to create products and variants.</AdminAccessState>;
+    }
+    if (gate === 'forbidden') {
+        return (
+            <AdminAccessState>
+                Your current role cannot create products. Ask a Super Admin for Inventory Admin, Manager, or Super Admin access.
+            </AdminAccessState>
+        );
+    }
 
     return (
         <div className="page-container admin-products-page">
@@ -113,7 +122,7 @@ export default function AdminProductCreate() {
                 </div>
             </div>
 
-            {error ? <p className="admin-products-notice admin-products-notice--err">{error}</p> : null}
+            {error ? <AdminErrorNotice>{error}</AdminErrorNotice> : null}
 
             <section className="admin-products-panel">
                 <form className="admin-products-form" onSubmit={submit}>
@@ -149,24 +158,6 @@ export default function AdminProductCreate() {
                     </button>
                 </form>
             </section>
-        </div>
-    );
-}
-
-function NavigateLogin() {
-    return (
-        <div className="page-container admin-products-page">
-            <p>Sign in as admin to manage products.</p>
-            <Link to="/login">Go to login</Link>
-        </div>
-    );
-}
-
-function NavigateForbidden() {
-    return (
-        <div className="page-container admin-products-page">
-            <p>Access denied.</p>
-            <Link to="/dashboard">View as customer</Link>
         </div>
     );
 }

@@ -25,5 +25,11 @@ class AuthServiceProvider extends ServiceProvider
         Gate::define('access-admin', function (User $user): bool {
             return $user->isAdmin();
         });
+
+        foreach (array_keys(User::ADMIN_PERMISSION_ROLES) as $permission) {
+            Gate::define($permission, function (User $user) use ($permission): bool {
+                return $user->hasAdminPermission($permission);
+            });
+        }
     }
 }

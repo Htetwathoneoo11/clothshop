@@ -162,6 +162,16 @@ export default function ProductDetail() {
 
     return (
         <div className="page-container product-detail">
+            {isAdminViewer ? (
+                <section className="customer-preview-banner" aria-label="Admin customer preview">
+                    <div>
+                        <strong>Viewing product as admin</strong>
+                        <p>This is the customer product page in preview mode. Cart and checkout actions stay disabled for admin accounts.</p>
+                    </div>
+                    <Link to="/admin/products" className="customer-preview-banner__action">Manage products</Link>
+                </section>
+            ) : null}
+
             <nav className="product-detail-back" aria-label="Breadcrumb">
                 <Link to="/dashboard" className="product-detail-back-link">
                     <ChevronLeft size={18} aria-hidden="true" />
@@ -310,4 +320,3 @@ export default function ProductDetail() {
         </div>
     );
 }
-

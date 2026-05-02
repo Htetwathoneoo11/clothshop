@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Link, useSearchParams } from 'react-router-dom';
 import {
     AlertCircle,
+    ArrowLeft,
     ArrowDown,
     ArrowUp,
     Calendar,
@@ -261,7 +262,7 @@ export default function BoardsAdmin() {
                     setGate('unauthenticated');
                     return;
                 }
-                if (!user.is_admin) {
+                if (!user.permissions?.manage_marketing) {
                     setGate('forbidden');
                     return;
                 }
@@ -718,10 +719,10 @@ export default function BoardsAdmin() {
                         <ShieldAlert size={28} strokeWidth={2} />
                     </span>
                     <h1 className="admin-hero-title">Access restricted</h1>
-                    <p className="admin-hero-text">This area is reserved for shop administrators.</p>
-                    <Link to="/dashboard" className="admin-hero-btn admin-hero-btn--primary">
+                    <p className="admin-hero-text">Access denied for this admin role.</p>
+                    <Link to="/admin" className="admin-hero-btn admin-hero-btn--primary">
                         <LayoutDashboard size={18} aria-hidden />
-                        View as customer
+                        Back to admin dashboard
                     </Link>
                 </div>
             </div>
@@ -733,9 +734,9 @@ export default function BoardsAdmin() {
             <div className="admin-hero-shell">
                 <header className="admin-hero-header">
                     <div className="admin-hero-header-top">
-                        <Link to="/dashboard" className="admin-hero-back">
-                            <LayoutDashboard size={16} aria-hidden />
-                            View as customer
+                        <Link to="/admin/products" className="admin-hero-back">
+                            <ArrowLeft size={16} aria-hidden />
+                            Back to Products
                         </Link>
                         <button
                             type="button"
@@ -1312,9 +1313,6 @@ export default function BoardsAdmin() {
         </div>
     );
 }
-
-
-
 
 
 

@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import { formatMMK } from './utils/money.js';
+
+axios.defaults.withCredentials = true;
 
 const DASHBOARD_HERO_DEFAULT_SUBTITLE =
     'Browse tops, outerwear, and more. Filter by category, sort by price, or search the catalog.';
@@ -46,6 +49,22 @@ export default function Dashboard() {
     const [error, setError] = useState('');
     const [hero, setHero] = useState(null);
     const [heroLoading, setHeroLoading] = useState(false);
+    const [viewer, setViewer] = useState(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        axios.get('/api/me')
+            .then((res) => {
+                if (!cancelled) setViewer(res.data?.user || null);
+            })
+            .catch(() => {
+                if (!cancelled) setViewer(null);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     useEffect(() => {
         let cancelled = false;
@@ -99,9 +118,20 @@ export default function Dashboard() {
     const heroImageAlt = hero?.title
         ? `Board: ${hero.title}`
         : 'Promotional hero banner';
+    const isAdminViewer = Boolean(viewer?.is_admin);
 
     return (
         <div className="page-container page-container--dashboard" id="product-dashboard">
+            {isAdminViewer ? (
+                <section className="customer-preview-banner" aria-label="Admin customer preview">
+                    <div>
+                        <strong>Viewing storefront as admin</strong>
+                        <p>Use this mode to check the customer experience. Buying, cart, and checkout remain disabled for admin accounts.</p>
+                    </div>
+                    <Link to="/admin" className="customer-preview-banner__action">Back to admin</Link>
+                </section>
+            ) : null}
+
             <section
                 className="dashboard-hero"
                 aria-labelledby="dashboard-hero-heading"
@@ -267,6 +297,5 @@ export default function Dashboard() {
         </div>
     );
 }
-
 
 

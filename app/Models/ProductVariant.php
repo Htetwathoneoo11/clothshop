@@ -24,6 +24,7 @@ class ProductVariant extends Model
     protected $casts = [
         'price' => 'decimal:2',
         'price_mmk' => 'integer',
+        'stock' => 'integer',
     ];
 
     public function product(): BelongsTo
@@ -34,5 +35,10 @@ class ProductVariant extends Model
     public function cartItems(): HasMany
     {
         return $this->hasMany(CartItem::class);
+    }
+
+    public function inventoryAdjustments(): HasMany
+    {
+        return $this->hasMany(InventoryAdjustment::class);
     }
 }

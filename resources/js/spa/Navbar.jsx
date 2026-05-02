@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { Box, Eye, House, LayoutPanelTop, ShoppingCart } from 'lucide-react';
+import { Bell, Box, ClipboardList, Gauge, House, ShoppingCart, Users } from 'lucide-react';
 import { useCart } from './cart/CartContext.jsx';
 import { listenForAuthChange } from './utils/authEvents.js';
 
@@ -18,9 +18,20 @@ function initialsFromUsername(username) {
 
 export default function Navbar() {
     const [user, setUser] = useState(null);
+    const [notificationCount, setNotificationCount] = useState(0);
+    const [notificationRefreshKey, setNotificationRefreshKey] = useState(0);
     const { cartCount, refreshCartCount } = useCart();
     const location = useLocation();
     const navigate = useNavigate();
+    const can = (permission) => Boolean(user?.permissions?.[permission] ?? user?.is_admin);
+    const isPathActive = (path) => {
+        if (location.pathname === path) return true;
+        return location.pathname.startsWith(`${path}/`);
+    };
+    const isAdminSectionActive = (paths) => paths.some((path) => isPathActive(path));
+    const isDashboardActive = location.pathname === '/admin'
+        || isPathActive('/admin/dashboard')
+        || isPathActive('/admin/reports');
 
     const refreshUser = () => axios.get('/api/me')
         .then((res) => {
@@ -36,6 +47,36 @@ export default function Navbar() {
     useEffect(() => {
         refreshUser();
     }, [location.pathname]);
+
+    useEffect(() => {
+        if (!user?.permissions?.view_notifications) {
+            setNotificationCount(0);
+            return undefined;
+        }
+
+        let cancelled = false;
+        axios.get('/api/admin/notifications')
+            .then((res) => {
+                if (cancelled) return;
+                const counts = res.data?.counts || {};
+                setNotificationCount(Number(counts.critical || 0) + Number(counts.warning || 0));
+            })
+            .catch(() => {
+                if (!cancelled) setNotificationCount(0);
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [user?.id, user?.permissions?.view_notifications, location.pathname, notificationRefreshKey]);
+
+    useEffect(() => {
+        const refreshNotifications = () => setNotificationRefreshKey((key) => key + 1);
+        window.addEventListener('admin-notifications-reviewed', refreshNotifications);
+        return () => {
+            window.removeEventListener('admin-notifications-reviewed', refreshNotifications);
+        };
+    }, []);
 
     useEffect(() => listenForAuthChange(async (event) => {
         const nextUser = await refreshUser();
@@ -63,24 +104,22 @@ export default function Navbar() {
     return (
         <header className="navbar">
             <div className="navbar-brand">
-                <NavLink to="/dashboard" className="navbar-brand-link" end>
+                <NavLink to={user?.is_admin ? '/admin' : '/dashboard'} className="navbar-brand-link" end>
                     <img src="/images/logo.png" alt="" className="navbar-brand-logo" width="40" height="40" />
                     <span className="navbar-brand-text">Clothshop</span>
                 </NavLink>
             </div>
             <nav className="nav-links" aria-label="Main">
-                <NavLink
-                    to="/dashboard"
-                    className={({ isActive }) => `nav-link nav-link--icon ${isActive ? 'nav-link-active' : ''}`}
-                    title={user?.is_admin ? 'View as customer' : 'Shop'}
-                    aria-label={user?.is_admin ? 'View as customer' : 'Shop'}
-                >
-                    {user?.is_admin ? (
-                        <Eye size={18} strokeWidth={2.2} aria-hidden="true" />
-                    ) : (
+                {!user?.is_admin ? (
+                    <NavLink
+                        to="/dashboard"
+                        className={({ isActive }) => `nav-link nav-link--icon ${isActive ? 'nav-link-active' : ''}`}
+                        title="Shop"
+                        aria-label="Shop"
+                    >
                         <House size={18} strokeWidth={2.2} aria-hidden="true" />
-                    )}
-                </NavLink>
+                    </NavLink>
+                ) : null}
                 {user ? (
                     <>
                         {!user.is_admin ? (
@@ -97,21 +136,56 @@ export default function Navbar() {
                         {user.is_admin ? (
                             <>
                                 <NavLink
-                                    to="/admin/products"
-                                    className={({ isActive }) => `nav-link nav-link--icon ${isActive ? 'nav-link-active' : ''}`}
-                                    title="Products"
-                                    aria-label="Products"
+                                    to="/admin"
+                                    className={() => `nav-link nav-link--icon ${isDashboardActive ? 'nav-link-active' : ''}`}
+                                    title="Admin dashboard"
+                                    aria-label="Admin dashboard"
                                 >
-                                    <Box size={18} strokeWidth={2.2} aria-hidden="true" />
+                                    <Gauge size={18} strokeWidth={2.2} aria-hidden="true" />
                                 </NavLink>
-                                <NavLink
-                                    to="/admin/boards"
-                                    className={({ isActive }) => `nav-link nav-link--icon ${isActive ? 'nav-link-active' : ''}`}
-                                    title="Boards"
-                                    aria-label="Boards"
-                                >
-                                    <LayoutPanelTop size={18} strokeWidth={2.2} aria-hidden="true" />
-                                </NavLink>
+                                {can('manage_orders') ? (
+                                    <NavLink
+                                        to="/admin/orders"
+                                        className={() => `nav-link nav-link--icon ${isAdminSectionActive(['/admin/orders', '/admin/coupons']) ? 'nav-link-active' : ''}`}
+                                        title="Orders"
+                                        aria-label="Orders"
+                                    >
+                                        <ClipboardList size={18} strokeWidth={2.2} aria-hidden="true" />
+                                    </NavLink>
+                                ) : null}
+                                {can('manage_users') ? (
+                                    <NavLink
+                                        to="/admin/users"
+                                        className={() => `nav-link nav-link--icon ${isAdminSectionActive(['/admin/users', '/admin/audit-logs']) ? 'nav-link-active' : ''}`}
+                                        title="Users"
+                                        aria-label="Users"
+                                    >
+                                        <Users size={18} strokeWidth={2.2} aria-hidden="true" />
+                                    </NavLink>
+                                ) : null}
+                                {can('manage_catalog') ? (
+                                    <NavLink
+                                        to="/admin/products"
+                                        className={() => `nav-link nav-link--icon ${isAdminSectionActive(['/admin/products', '/admin/inventory', '/admin/boards']) ? 'nav-link-active' : ''}`}
+                                        title="Products"
+                                        aria-label="Products"
+                                    >
+                                        <Box size={18} strokeWidth={2.2} aria-hidden="true" />
+                                    </NavLink>
+                                ) : null}
+                                {can('view_notifications') ? (
+                                    <NavLink
+                                        to="/admin/notifications"
+                                        className={({ isActive }) => `nav-link nav-link--icon nav-link--admin-alert ${isActive ? 'nav-link-active' : ''}`}
+                                        title="Notifications"
+                                        aria-label="Notifications"
+                                    >
+                                        <Bell size={18} strokeWidth={2.2} aria-hidden="true" />
+                                        {notificationCount > 0 ? (
+                                            <span className="nav-admin-badge">{notificationCount > 99 ? '99+' : notificationCount}</span>
+                                        ) : null}
+                                    </NavLink>
+                                ) : null}
                             </>
                         ) : null}
                         <NavLink
@@ -143,5 +217,3 @@ export default function Navbar() {
         </header>
     );
 }
-
-
