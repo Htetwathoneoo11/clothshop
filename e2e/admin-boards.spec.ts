@@ -4,12 +4,12 @@ const adminUsername = process.env.E2E_ADMIN_USERNAME;
 const adminPassword = process.env.E2E_ADMIN_PASSWORD;
 
 async function signInAsAdmin(page: import('@playwright/test').Page): Promise<void> {
-    await page.goto('/login');
+    await page.goto('login');
     await page.locator('#login-username').fill(adminUsername ?? '');
     await page.locator('#login-password').fill(adminPassword ?? '');
     await page.getByRole('button', { name: 'Sign in' }).click();
     await page.waitForURL('**/dashboard');
-    await page.goto('/admin/boards');
+    await page.goto('admin/boards');
     await expect(page.getByRole('heading', { name: 'Boards' })).toBeVisible();
 }
 
@@ -20,13 +20,20 @@ function extractTotalCount(text: string): number {
 
 async function ensureAtLeastOneBoard(page: import('@playwright/test').Page): Promise<void> {
     const cards = page.locator('.admin-hero-card-list .admin-hero-card');
+    await expect(page.locator('.admin-hero-list-wrap')).toBeVisible();
+    await expect(page.locator('.admin-hero-skeleton-list')).toBeHidden();
+
     if (await cards.count()) {
+        return;
+    }
+
+    if (await page.getByText(/You can create up to \d+ boards/i).isVisible()) {
         return;
     }
 
     const title = `E2E Board ${Date.now()}`;
     const createSection = page.locator('section[aria-labelledby="admin-hero-new"]');
-    await createSection.getByLabel(/Title/i).fill(title);
+    await createSection.getByRole('textbox', { name: 'Title *' }).fill(title);
     await createSection.getByRole('button', { name: /Publish board/i }).click();
     await expect(page.locator('.admin-hero-card-title').filter({ hasText: title })).toBeVisible();
 }
@@ -39,13 +46,17 @@ test.describe('Admin boards UX', () => {
     });
 
     test('confirm modal supports keyboard access and restores focus', async ({ page }) => {
-        const activateButton = page.getByRole('button', { name: 'Activate' }).first();
-        if (await activateButton.count()) {
-            await activateButton.click();
-            await expect(page.getByText('Board status updated.')).toBeVisible();
+        let deactivateButton = page.getByRole('button', { name: 'Deactivate' }).first();
+
+        if (!await deactivateButton.isVisible().catch(() => false)) {
+            await page.getByRole('button', { name: 'Activate' }).first().click();
+            const activateDialog = page.getByRole('dialog');
+            await expect(activateDialog).toBeVisible();
+            await activateDialog.getByRole('button', { name: 'Activate' }).click();
+            await expect(activateDialog).toBeHidden();
+            deactivateButton = page.getByRole('button', { name: 'Deactivate' }).first();
         }
 
-        const deactivateButton = page.getByRole('button', { name: 'Deactivate' }).first();
         await expect(deactivateButton).toBeVisible();
         await deactivateButton.click();
 
@@ -73,14 +84,14 @@ test.describe('Admin boards UX', () => {
         const dialog = page.getByRole('dialog');
         await dialog.getByRole('button', { name: 'Duplicate' }).click();
 
-        await expect(page.getByText('Board duplicated.')).toBeVisible();
+        await expect(page.getByText('Board duplicated.').first()).toBeVisible();
 
         await expect.poll(async () => {
             const text = await page.locator('.admin-hero-list-head .admin-hero-count').innerText();
             return extractTotalCount(text);
         }).toBe(totalBefore + 1);
 
-        await page.getByRole('button', { name: 'Undo' }).click();
+        await page.getByRole('button', { name: 'Undo', exact: true }).click();
         await expect(page.getByText('Duplicate removed.')).toBeVisible();
 
         await expect.poll(async () => {
@@ -112,4 +123,3 @@ test.describe('Admin boards UX', () => {
         await expect(sortSelect).toHaveValue('title_asc');
     });
 });
-

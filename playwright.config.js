@@ -1,5 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
+const baseURL = (process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8000/clothshop').replace(/\/?$/, '/');
+
 export default defineConfig({
     testDir: './e2e',
     timeout: 60_000,
@@ -15,7 +17,7 @@ export default defineConfig({
         ['html', { open: 'never' }],
     ],
     use: {
-        baseURL: process.env.PLAYWRIGHT_BASE_URL || 'http://127.0.0.1:8000/clothshop',
+        baseURL,
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
         video: 'retain-on-failure',
@@ -27,4 +29,3 @@ export default defineConfig({
         },
     ],
 });
-

@@ -1,72 +1,90 @@
 # Clothshop
 
-Clothshop is a coursework e-commerce application for browsing clothing products, managing a cart, and placing orders.  
-It is built as a Laravel backend API with a React single-page frontend.
+Clothshop is a coursework e-commerce application for browsing clothing products, managing a cart, placing orders, and running store administration workflows. It is built as a Laravel backend API with a React single-page frontend served under `/clothshop`.
 
 ## What This Project Does
 
-- Public product catalog with search, filtering, and sorting
-- Product detail pages with size/color variant selection
-- User authentication (register, login, logout, current user)
-- Email verification with Mailtrap-delivered 6-digit OTP codes
-- Authenticated cart operations (add, update quantity, remove)
-- Checkout flow with delivery details and payment method selection for verified users
-- Order creation with stock checks and stock decrement in a transaction
-- Profile page with avatar upload/remove and order history
+- Public storefront with product search, category filtering, sorting, product detail pages, and variant selection.
+- User authentication with registration, login, logout, remember-me support, current-user session checks, and case-sensitive username/email lookup.
+- Email verification using Mailtrap-delivered 6-digit OTP codes.
+- Password reset flow with branded reset emails, reset-token validation, and neutral responses for privacy.
+- Authenticated cart operations: add items, update quantities, remove items, and apply/remove loyalty coupons.
+- Checkout for verified customers with delivery details, payment method selection, stock validation, stock decrement, and order creation inside a transaction.
+- Stripe Checkout sandbox support for online test payments, including confirm and webhook handling.
+- User profile with avatar upload/removal, order history, email verification state, credit score, and loyalty coupon history.
+- Admin dashboard for store operations, including products, variants, orders, users, staff invitations, hero boards, coupons, inventory adjustments, notifications, reports, and audit logs.
 
 ## Tech Stack
 
-- Backend: Laravel 10, PHP 8.1+, Sanctum (session auth), Eloquent ORM
-- Frontend: React, React Router, Vite, Axios, Lucide icons
-- Database: MySQL (default local setup), sqlite in-memory for tests
-- Testing: PHPUnit feature/unit tests via `php artisan test`
+- Backend: Laravel 10, PHP 8.1+, Eloquent ORM, Laravel Sanctum session authentication.
+- Frontend: React, React Router, Vite, Axios, Lucide icons.
+- Database: MySQL by default for local development; sqlite in-memory for automated tests.
+- Payments: Stripe Checkout sandbox.
+- Email: SMTP/Mailtrap for verification and reset emails.
+- Testing: PHPUnit feature/unit tests and Playwright E2E browser tests.
 
-## Credit score & user roles
+## Application Architecture
 
-- **Credit score** increases by the order `total_amount_mmk` when a paid order is completed (once per order; tracked via `orders.credit_awarded_at`).
-- Checkout with on-delivery payment creates a pending order; credit is awarded only after the order is later marked paid.
-- Stripe Checkout sandbox is available for online test payments; successful Stripe payments mark orders paid and award credit.
-- At **500,000 MMK** credit score, the user receives a one-time `LOYAL10-{user_id}` coupon for **10% off** in the cart.
-- **Roles**: `User::ROLE_USER` (1) and `User::ROLE_ADMIN` (2). The `/api/me` payload includes `role` and `is_admin`.
+- `routes/web.php` serves the React SPA shell for `/clothshop` and nested SPA paths.
+- `routes/api.php` exposes JSON API endpoints for auth, products, cart, checkout, profile, orders, admin workflows, Stripe, and public marketing boards.
+- `resources/js/spa/main.jsx` mounts the React app with `BrowserRouter` using `basename="/clothshop"`.
+- `resources/js/spa` contains customer pages, admin pages, cart/checkout context, shared navigation, footer, and utility helpers.
+- `app/Http/Controllers/Api` contains the API controllers.
+- `app/Models` contains the domain models, including users, products, variants, carts, orders, coupons, boards, inventory adjustments, audit logs, and staff invitations.
+- `database/migrations` defines the persistent schema.
+- `tests/Feature` and `tests/Unit` contain the PHPUnit automated tests.
+- `e2e` contains Playwright browser tests for admin board UX.
 
-## Currency (MMK)
+## Customer Features
 
-- Display currency is **MMK** (integer kyat, no decimals in the UI).
-- Product, cart, checkout, and order APIs expose integer `*_mmk` fields; responses include `currency_code: "MMK"` where relevant.
-- Legacy decimal columns (`price`, `unit_price`, `total_amount`, etc.) are retained for transition; new writes also populate these using `MMK_PER_USD` (default **2100**) where backward-compatible strings are needed.
-- Shared backend helper: `App\Support\MmkMoney`. Shared frontend formatting: `resources/js/spa/utils/money.js` (`formatMMK`, `toIntegerMMK`).
+- Browse active products and variants.
+- Search by product text, filter by category, and sort by price.
+- View product details and select available size/color variants.
+- Register, verify email by OTP, sign in, sign out, and reset forgotten passwords.
+- Maintain a cart tied to the authenticated user.
+- Checkout with delivery name, phone, date/time, address fields, and payment method.
+- Pay on delivery or use Stripe sandbox online payment.
+- View profile, avatar, order history, credit score, and loyalty rewards.
 
-## Project Structure
+## Admin Features
 
-- `routes/web.php`: catch-all route that serves the SPA shell
-- `routes/api.php`: JSON API routes for auth, products, cart, checkout, profile, orders
-- `app/Http/Controllers/Api`: API controllers
-- `app/Models`: domain models (`Product`, `ProductVariant`, `Cart`, `Order`, etc.)
-- `app/Support/MmkMoney.php`: integer MMK helpers (conversion for legacy USD decimals)
-- `resources/js/spa`: React SPA pages/components
-- `resources/views/spa.blade.php`: SPA entry view
-- `tests/Feature`: API and auth feature tests
+Admin access is permission-based. The role and permission payload is returned by `/api/me`.
 
-## Footer Information Block
+- Super Admin: full admin access, including users, roles, staff invitations, audit logs, products, orders, reports, coupons, boards, inventory, and notifications.
+- Manager: operational access to orders, catalog, marketing, loyalty, inventory, reports, and notifications.
+- Support: order and notification access.
+- Inventory Admin: catalog, inventory, reports, and notification access.
 
-The SPA includes a global footer shown across pages with the following content groups:
+Admin modules include:
 
-- **Brand**: Clothshop + short brand message
-- **Shop**: links to Shop, Cart, Checkout, and Profile
-- **Help**: links to Contact, Shipping & Delivery, Returns, and FAQ pages
-- **Legal**: links to Privacy Policy and Terms of Service pages
-- **Follow**: external links to Instagram, Facebook, and TikTok
-- **Trust**: secure checkout note
-- **Copyright**: `© 2026 Clothshop. All rights reserved.`
+- Dashboard metrics and recent orders.
+- Product and variant CRUD with image upload/replacement/removal.
+- Order filtering, detail view, and status updates.
+- User search, role/status management, and activity timeline.
+- Staff invitation creation, cancellation, and acceptance.
+- Hero board/marketing banner management with activation, duplication, priority shifting, and undo-friendly UX.
+- Coupon grant/expiry/reactivation workflows.
+- Inventory variant lookup and stock adjustment history.
+- Notification review workflow and review archive.
+- Sales/customer/product/inventory reports.
+- Audit log viewer for admin mutations.
 
-Footer-linked internal pages are routed in the SPA as:
+## Credit Score, Loyalty, and Roles
 
-- `/contact`
-- `/shipping-delivery`
-- `/returns`
-- `/faq`
-- `/privacy-policy`
-- `/terms-of-service`
+- Credit score increases by an order's `total_amount_mmk` only after the order is paid.
+- Checkout with on-delivery payment creates a pending order; credit is awarded later when an admin marks the order paid.
+- Stripe Checkout success marks the order paid and awards credit once.
+- At 500,000 MMK credit score, the user receives a one-time `LOYAL10-{user_id}` coupon for 10% off in the cart.
+- Reward tiers are designed to create one coupon per user per threshold.
+- Admin users cannot use cart or checkout purchase endpoints.
+
+## Currency
+
+- Display currency is MMK.
+- Product, cart, checkout, order, coupon, inventory, and report APIs use integer `*_mmk` values where money is exposed.
+- Legacy decimal money columns are retained for compatibility while current writes also populate integer MMK columns.
+- Backend money helper: `App\Support\MmkMoney`.
+- Frontend money helper: `resources/js/spa/utils/money.js`.
 
 ## Main API Endpoints
 
@@ -79,21 +97,74 @@ Public:
 - `POST /api/auth/forgot-password`
 - `POST /api/auth/validate-reset-token`
 - `POST /api/auth/reset-password`
+- `POST /api/staff-invitations/accept`
 - `GET /api/products`
 - `GET /api/products/{product}`
+- `GET /api/boards/active`
+- `POST /api/stripe/webhook`
 
-Authenticated (`auth:sanctum`):
+Authenticated:
 
 - `GET /api/me`
 - `POST /api/auth/logout`
 - `POST /api/me/avatar`
 - `DELETE /api/me/avatar`
 - `GET /api/orders`
+- `GET /api/orders/{order}`
+- `POST /api/orders/{order}/stripe-checkout`
+- `POST /api/orders/stripe-confirm`
 - `GET /api/cart`
 - `POST /api/cart`
+- `POST /api/cart/coupon`
+- `DELETE /api/cart/coupon`
 - `PATCH /api/cart/{cartItem}`
 - `DELETE /api/cart/{cartItem}`
 - `POST /api/checkout`
+
+Admin:
+
+- `GET /api/admin/dashboard`
+- `GET /api/admin/products`
+- `POST /api/admin/products`
+- `GET /api/admin/products/{product}`
+- `PUT /api/admin/products/{product}`
+- `DELETE /api/admin/products/{product}`
+- `POST /api/admin/products/{product}/variants`
+- `PUT /api/admin/product-variants/{variant}`
+- `DELETE /api/admin/product-variants/{variant}`
+- `GET /api/admin/orders`
+- `GET /api/admin/orders/{order}`
+- `PATCH /api/admin/orders/{order}/status`
+- `GET /api/admin/users`
+- `GET /api/admin/users/{user}`
+- `PATCH /api/admin/users/{user}/status`
+- `PATCH /api/admin/users/{user}/role`
+- `GET /api/admin/staff-invitations`
+- `POST /api/admin/staff-invitations`
+- `PATCH /api/admin/staff-invitations/{staffInvitation}/cancel`
+- `GET /api/admin/boards`
+- `POST /api/admin/boards`
+- `PUT /api/admin/boards/{board}`
+- `DELETE /api/admin/boards/{board}`
+- `POST /api/admin/boards/{board}/duplicate`
+- `POST /api/admin/boards/{board}/toggle-active`
+- `POST /api/admin/boards/{board}/shift-priority`
+- `GET /api/admin/coupons`
+- `POST /api/admin/coupons`
+- `GET /api/admin/coupons/{coupon}`
+- `PATCH /api/admin/coupons/{coupon}/expire`
+- `PATCH /api/admin/coupons/{coupon}/reactivate`
+- `GET /api/admin/inventory-variants`
+- `GET /api/admin/inventory-adjustments`
+- `POST /api/admin/inventory-adjustments`
+- `GET /api/admin/inventory-adjustments/{inventoryAdjustment}`
+- `GET /api/admin/notifications`
+- `GET /api/admin/notifications/reviews`
+- `POST /api/admin/notifications/bulk-review`
+- `POST /api/admin/notifications/{notificationId}/review`
+- `GET /api/admin/reports`
+- `GET /api/admin/audit-logs`
+- `GET /api/admin/audit-logs/{auditLog}`
 
 ## Local Setup
 
@@ -110,23 +181,23 @@ Authenticated (`auth:sanctum`):
    npm install
    ```
 
-4. Create and configure environment file:
+4. Create and configure the environment file:
 
    ```bash
    cp .env.example .env
-   # On Windows PowerShell, use:
-   # copy .env.example .env
+   # On Windows PowerShell:
+   copy .env.example .env
    php artisan key:generate
    ```
 
-5. Update database credentials in `.env` (MySQL by default).
+5. Update database credentials in `.env`.
 6. Run migrations and seed sample products:
 
    ```bash
    php artisan migrate --seed
    ```
 
-7. Link storage for uploaded avatars:
+7. Link storage for uploaded avatars and product/board images:
 
    ```bash
    php artisan storage:link
@@ -139,8 +210,7 @@ Authenticated (`auth:sanctum`):
    npm run dev
    ```
 
-Open the app in your browser (using your local Laravel URL).  
-The SPA is configured with a base path of `/clothshop`.
+Open `http://127.0.0.1:8000/clothshop`.
 
 ## Mailtrap Email Setup
 
@@ -157,21 +227,21 @@ MAIL_FROM_ADDRESS="noreply@clothshop.test"
 MAIL_FROM_NAME="Clothshop"
 ```
 
-Make sure `APP_URL` points to the Laravel app URL that should open reset links, for example:
+Make sure `APP_URL` points to the Laravel app URL that should open reset links:
 
 ```env
 APP_URL=http://127.0.0.1:8000
 ```
 
-After changing mail or app URL settings, clear cached config:
+After changing mail or app URL settings:
 
 ```bash
 php artisan config:clear
 ```
 
-## Stripe Sandbox Payment Setup
+## Stripe Sandbox Setup
 
-Stripe Checkout sandbox uses test keys only. Add your Stripe secret key and webhook signing secret to `.env`:
+Stripe Checkout sandbox uses test keys only. Add these values to `.env`:
 
 ```env
 STRIPE_SECRET_KEY=sk_test_your_key
@@ -179,7 +249,7 @@ STRIPE_WEBHOOK_SECRET=whsec_your_local_or_dashboard_secret
 STRIPE_CURRENCY=usd
 ```
 
-Because the shop displays MMK while Stripe sandbox charges USD, the Stripe amount uses the existing legacy USD equivalent from `MMK_PER_USD`.
+Because the shop displays MMK while Stripe sandbox charges USD, Stripe amounts use the existing legacy USD equivalent from `MMK_PER_USD`.
 
 For local webhook testing with the Stripe CLI:
 
@@ -189,17 +259,42 @@ stripe listen --forward-to http://127.0.0.1:8000/api/stripe/webhook
 
 ## Running Tests
 
-Run all tests:
+Run the PHPUnit test suite:
 
 ```bash
 php artisan test
 ```
 
+Run the production frontend build:
+
+```bash
+npm run build
+```
+
+Run Playwright E2E tests after the Laravel app and Vite dev server are running:
+
+```bash
+npm run test:e2e
+```
+
+The E2E suite targets `PLAYWRIGHT_BASE_URL` and defaults to `http://127.0.0.1:8000/clothshop/`. The Playwright config normalizes the base URL with a trailing slash so relative SPA paths resolve under `/clothshop`. It requires these environment variables:
+
+```env
+E2E_ADMIN_USERNAME=your_admin_username
+E2E_ADMIN_PASSWORD=your_admin_password
+```
+
+If Playwright browsers are not installed locally, install Chromium first:
+
+```bash
+npx playwright install chromium
+```
+
 ## Current Limitations
 
-- Online payment is Stripe sandbox only; live payments are not configured.
-- No admin dashboard for product/order management.
-- README documents current implementation only; deployment instructions are not included.
+- Online card payment is configured for Stripe sandbox only; live payment keys and production payment operations are not included.
+- Deployment instructions for `mi-linux.wlv.ac.uk` or another production server are not included in this repository.
+- Playwright E2E tests require a running local app and an existing admin account.
 
 ## License
 
