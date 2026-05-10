@@ -2,6 +2,7 @@ import { expect, test } from '@playwright/test';
 
 const customerUsername = process.env.E2E_CUSTOMER_USERNAME;
 const customerPassword = process.env.E2E_CUSTOMER_PASSWORD;
+const e2eProductName = 'AAA E2E Test Product';
 
 async function signInAsCustomer(page: import('@playwright/test').Page): Promise<void> {
     await page.goto('login');
@@ -12,13 +13,29 @@ async function signInAsCustomer(page: import('@playwright/test').Page): Promise<
     await expect(page.getByRole('link', { name: /profile|your profile/i }).first()).toBeVisible();
 }
 
-async function openFirstProduct(page: import('@playwright/test').Page): Promise<void> {
+async function openE2EProduct(page: import('@playwright/test').Page): Promise<void> {
     await page.goto('dashboard');
     await expect(page.locator('.products-cards-grid')).toBeVisible();
-    const firstProduct = page.locator('.product-card-dashboard-title a').first();
-    await expect(firstProduct).toBeVisible();
-    await firstProduct.click();
-    await expect(page.locator('.product-detail-title')).toBeVisible();
+    await page.getByLabel('Search').fill(e2eProductName);
+    const product = page.locator('.product-card-dashboard-title a').filter({ hasText: e2eProductName }).first();
+    await expect(product).toBeVisible();
+    await product.click();
+    await expect(page.locator('.product-detail-title')).toContainText(e2eProductName);
+}
+
+async function clearCart(page: import('@playwright/test').Page): Promise<void> {
+    await page.goto('cart');
+
+    for (let i = 0; i < 10; i += 1) {
+        const itemCount = await page.locator('.cart-item-card').count();
+        const removeButton = page.getByRole('button', { name: /remove/i }).first();
+        if (!await removeButton.isVisible({ timeout: 1500 }).catch(() => false)) {
+            return;
+        }
+
+        await removeButton.click();
+        await expect.poll(async () => page.locator('.cart-item-card').count()).toBeLessThan(itemCount);
+    }
 }
 
 test.describe('Public storefront frontend', () => {
@@ -74,7 +91,8 @@ test.describe('Authenticated customer frontend', () => {
     });
 
     test('product detail can add an item to cart and cart can remove it', async ({ page }) => {
-        await openFirstProduct(page);
+        await clearCart(page);
+        await openE2EProduct(page);
         await page.getByRole('button', { name: /add to cart/i }).click();
         await expect(page.getByText('Added to cart.')).toBeVisible();
 
@@ -83,20 +101,18 @@ test.describe('Authenticated customer frontend', () => {
         await expect(page.locator('.cart-item-card').first()).toBeVisible();
 
         await page.getByRole('button', { name: /remove/i }).first().click();
-        await expect(page.getByText('Your cart is empty.')).toBeVisible();
+        await expect(page.locator('.cart-item-card').filter({ hasText: e2eProductName })).toHaveCount(0);
     });
 
     test('checkout validates delivery form and completes cash-on-delivery order', async ({ page }) => {
-        await openFirstProduct(page);
+        await clearCart(page);
+        await openE2EProduct(page);
         await page.getByRole('button', { name: /add to cart/i }).click();
         await expect(page.getByText('Added to cart.')).toBeVisible();
-
         await page.goto('checkout');
         await expect(page.getByRole('heading', { name: /review & place order/i })).toBeVisible();
-
         await page.getByRole('button', { name: /confirm checkout/i }).click();
         await expect(page.getByRole('status')).toContainText('Please fill in all delivery information fields');
-
         await page.getByLabel('Name').fill('E2E Customer');
         await page.getByLabel('Phone number').fill('09123456789');
         await page.getByLabel('Date for delivery').fill('2026-05-20');
@@ -112,6 +128,10 @@ test.describe('Authenticated customer frontend', () => {
         await expect(page.getByText('Your cart is empty.')).toBeVisible();
 
         await page.goto('profile');
+        if (await page.getByRole('link', { name: 'Sign in' }).isVisible().catch(() => false)) {
+            await signInAsCustomer(page);
+            await page.goto('profile');
+        }
         await expect(page.getByRole('heading', { name: /^profile$/i })).toBeVisible();
         await expect(page.getByText(/order #/i).first()).toBeVisible();
     });

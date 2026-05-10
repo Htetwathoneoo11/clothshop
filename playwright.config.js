@@ -32,6 +32,9 @@ export default defineConfig({
     ],
     use: {
         baseURL,
+        extraHTTPHeaders: {
+            'X-Playwright-E2E': '1',
+        },
         trace: 'on-first-retry',
         screenshot: 'only-on-failure',
         video: 'retain-on-failure',

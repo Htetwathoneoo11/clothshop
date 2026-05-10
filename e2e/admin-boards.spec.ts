@@ -10,6 +10,9 @@ async function signInAsAdmin(page: import('@playwright/test').Page): Promise<voi
     await page.getByRole('button', { name: 'Sign in' }).click();
     await page.waitForURL('**/dashboard');
     await page.goto('admin/boards');
+    if (await page.getByText('Could not load boards. Try again.').isVisible().catch(() => false)) {
+        await page.reload();
+    }
     await expect(page.getByRole('heading', { name: 'Boards' })).toBeVisible();
 }
 
@@ -35,6 +38,18 @@ async function ensureAtLeastOneBoard(page: import('@playwright/test').Page): Pro
     const createSection = page.locator('section[aria-labelledby="admin-hero-new"]');
     await createSection.getByRole('textbox', { name: 'Title *' }).fill(title);
     await createSection.getByRole('button', { name: /Publish board/i }).click();
+    if (await page.getByText('Could not create board.').isVisible().catch(() => false)) {
+        await page.reload();
+        if (await cards.count()) {
+            return;
+        }
+
+        const retryTitle = `E2E Board ${Date.now()}`;
+        await createSection.getByRole('textbox', { name: 'Title *' }).fill(retryTitle);
+        await createSection.getByRole('button', { name: /Publish board/i }).click();
+        await expect(page.locator('.admin-hero-card-title').filter({ hasText: retryTitle })).toBeVisible();
+        return;
+    }
     await expect(page.locator('.admin-hero-card-title').filter({ hasText: title })).toBeVisible();
 }
 

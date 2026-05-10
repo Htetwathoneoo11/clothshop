@@ -20,16 +20,41 @@ async function signInAsCustomer(page: import('@playwright/test').Page): Promise<
     await expect(page.getByRole('link', { name: /profile|your profile/i }).first()).toBeVisible();
 }
 
-async function openDashboardWithProducts(page: import('@playwright/test').Page): Promise<void> {
+async function clearCart(page: import('@playwright/test').Page): Promise<void> {
+    await page.goto('cart');
+
+    for (let i = 0; i < 10; i += 1) {
+        const itemCount = await page.locator('.cart-item-card').count();
+        const removeButton = page.getByRole('button', { name: /remove/i }).first();
+        if (!await removeButton.isVisible({ timeout: 1500 }).catch(() => false)) {
+            return;
+        }
+
+        await removeButton.click();
+        await expect.poll(async () => page.locator('.cart-item-card').count()).toBeLessThan(itemCount);
+    }
+}
+
+async function openDashboardWithProducts(page: import('@playwright/test').Page, searchTerm = ''): Promise<void> {
     for (let attempt = 0; attempt < 3; attempt += 1) {
         await page.goto('dashboard');
-        const firstProduct = page.locator('.product-card-dashboard-title a').first();
-        if (await firstProduct.isVisible({ timeout: 5000 }).catch(() => false)) {
+        if (searchTerm) {
+            await page.getByLabel('Search').fill(searchTerm);
+        }
+
+        const productLink = searchTerm
+            ? page.locator('.product-card-dashboard-title a').filter({ hasText: searchTerm }).first()
+            : page.locator('.product-card-dashboard-title a').first();
+
+        if (await productLink.isVisible({ timeout: 5000 }).catch(() => false)) {
             return;
         }
     }
 
-    await expect(page.locator('.product-card-dashboard-title a').first()).toBeVisible();
+    const productLink = searchTerm
+        ? page.locator('.product-card-dashboard-title a').filter({ hasText: searchTerm }).first()
+        : page.locator('.product-card-dashboard-title a').first();
+    await expect(productLink).toBeVisible();
 }
 
 test.describe('Responsive frontend layout', () => {
@@ -53,9 +78,10 @@ test.describe('Responsive frontend layout', () => {
     test('cart and checkout pages remain usable on mobile for a customer', async ({ page }) => {
         test.skip(!customerUsername || !customerPassword, 'Set E2E_CUSTOMER_USERNAME and E2E_CUSTOMER_PASSWORD to run customer E2E tests.');
         await signInAsCustomer(page);
+        await clearCart(page);
 
-        await openDashboardWithProducts(page);
-        await page.locator('.product-card-dashboard-title a').first().click();
+        await openDashboardWithProducts(page, 'AAA E2E Test Product');
+        await page.locator('.product-card-dashboard-title a').filter({ hasText: 'AAA E2E Test Product' }).first().click();
         await page.getByRole('button', { name: /add to cart/i }).click();
         await expect(page.getByText('Added to cart.')).toBeVisible();
 
