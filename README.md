@@ -282,7 +282,11 @@ The E2E suite targets `PLAYWRIGHT_BASE_URL` and defaults to `http://127.0.0.1:80
 ```env
 E2E_ADMIN_USERNAME=your_admin_username
 E2E_ADMIN_PASSWORD=your_admin_password
+E2E_CUSTOMER_USERNAME=your_verified_customer_username
+E2E_CUSTOMER_PASSWORD=your_verified_customer_password
 ```
+
+Without credentials, public storefront/auth-validation tests still run; authenticated customer and admin tests are skipped.
 
 If Playwright browsers are not installed locally, install Chromium first:
 

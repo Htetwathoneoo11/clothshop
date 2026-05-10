@@ -318,7 +318,10 @@ class AdminNotificationController extends Controller
                 ],
             ]);
 
-        return $sensitiveActivity->merge($busyActors)->values()->all();
+        return collect($sensitiveActivity->all())
+            ->merge($busyActors->all())
+            ->values()
+            ->all();
     }
 
     private function priorityRank(string $priority): int
