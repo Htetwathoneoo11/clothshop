@@ -8,12 +8,15 @@ use App\Models\User;
 use App\Notifications\StaffInvitationNotification;
 use App\Support\AdminAudit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Password;
+use Throwable;
 
 class AdminStaffInvitationController extends Controller
 {
@@ -84,11 +87,25 @@ class AdminStaffInvitationController extends Controller
             $this->invitationSnapshot($invitation)
         );
 
-        Notification::route('mail', $invitation->email)
-            ->notify(new StaffInvitationNotification($invitation, $acceptUrl));
+        $emailSent = true;
+        try {
+            Notification::route('mail', $invitation->email)
+                ->notify(new StaffInvitationNotification($invitation, $acceptUrl));
+        } catch (Throwable $exception) {
+            $emailSent = false;
+            Log::error('Staff invitation email could not be sent.', [
+                'staff_invitation_id' => $invitation->id,
+                'email' => $invitation->email,
+                'exception' => $exception,
+            ]);
+        }
 
         return response()->json([
             'invitation' => $this->serializeInvitation($invitation, $token),
+            'email_sent' => $emailSent,
+            'message' => $emailSent
+                ? 'Invitation email sent.'
+                : 'Invitation link created, but the email could not be sent. Copy the invite link and send it manually.',
         ], 201);
     }
 
@@ -152,8 +169,20 @@ class AdminStaffInvitationController extends Controller
             return $user;
         });
 
+        Auth::guard('web')->logout();
+        if ($request->hasSession()) {
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
+
+        Auth::guard('web')->login($user);
+        if ($request->hasSession()) {
+            $request->session()->regenerate();
+        }
+        $this->updateLoginMeta($request, $user);
+
         return response()->json([
-            'message' => 'Staff account created. You can now sign in.',
+            'message' => 'Staff account created. You are now signed in.',
             'user' => $user->fresh()->toApiArray(),
         ], 201);
     }
@@ -206,5 +235,14 @@ class AdminStaffInvitationController extends Controller
             'status' => $invitation->statusLabel(),
             'expires_at' => $invitation->expires_at?->toIso8601String(),
         ];
+    }
+
+    private function updateLoginMeta(Request $request, User $user): void
+    {
+        $user->forceFill([
+            'last_login_at' => now(),
+            'last_login_ip' => $request->ip(),
+            'user_agent' => substr((string) $request->userAgent(), 0, 1000),
+        ])->save();
     }
 }

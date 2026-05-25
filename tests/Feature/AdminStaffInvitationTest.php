@@ -6,6 +6,7 @@ use App\Models\StaffInvitation;
 use App\Models\User;
 use App\Notifications\StaffInvitationNotification;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
@@ -51,17 +52,21 @@ class AdminStaffInvitationTest extends TestCase
                 && ($notifiable->routes['mail'] ?? null) === 'staff-manager@example.test';
         });
 
+        Auth::guard('web')->logout();
+        $this->app['auth']->forgetGuards();
+
         $this->postJson('/api/staff-invitations/accept', [
             'token' => $token,
             'password' => 'StaffPass123',
             'password_confirmation' => 'StaffPass123',
         ])
             ->assertCreated()
-            ->assertJsonPath('message', 'Staff account created. You can now sign in.')
+            ->assertJsonPath('message', 'Staff account created. You are now signed in.')
             ->assertJsonPath('user.username', 'staff-manager')
             ->assertJsonPath('user.role', User::ROLE_MANAGER);
 
         $user = User::query()->where('email', 'staff-manager@example.test')->firstOrFail();
+        $this->assertAuthenticatedAs($user);
         $this->assertTrue(Hash::check('StaffPass123', $user->password));
         $this->assertNotNull($user->email_verified_at);
         $this->assertDatabaseHas('staff_invitations', [

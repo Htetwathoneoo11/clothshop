@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { Link, useSearchParams } from 'react-router-dom';
+import { emitAuthChange } from '../utils/authEvents.js';
+import { confirmAuthenticatedSession, wait } from '../utils/sessionAuth.js';
 
 export default function StaffInvitationAccept() {
     const [searchParams] = useSearchParams();
@@ -26,6 +28,14 @@ export default function StaffInvitationAccept() {
             setMessage(res.data?.message || 'Staff account created. You can now sign in.');
             setPassword('');
             setPasswordConfirmation('');
+            await wait(300);
+            try {
+                await confirmAuthenticatedSession();
+            } catch {
+                await wait(700);
+            }
+            emitAuthChange('login');
+            window.location.assign('/clothshop/admin');
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to accept staff invitation.');
         } finally {

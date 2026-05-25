@@ -313,7 +313,7 @@ export default function AdminUsers() {
             setInvitations((items) => [invitation, ...items]);
             setLatestInviteUrl(invitation.accept_url || '');
             setInviteForm((form) => ({ ...form, username: '', email: '' }));
-            setNotice(`Invitation email sent to ${invitation.email}.`);
+            setNotice(res.data?.message || `Invitation email sent to ${invitation.email}.`);
         } catch (err) {
             setError(err.response?.data?.message || 'Failed to create staff invitation.');
         } finally {
