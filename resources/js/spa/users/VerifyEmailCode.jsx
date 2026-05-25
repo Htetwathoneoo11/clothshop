@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Loader2, MailCheck } from 'lucide-react';
 import { emitAuthChange } from '../utils/authEvents.js';
+import { confirmAuthenticatedSession } from '../utils/sessionAuth.js';
 
 axios.defaults.withCredentials = true;
 
@@ -41,6 +42,7 @@ export default function VerifyEmailCode() {
                 email,
                 code,
             });
+            await confirmAuthenticatedSession();
             setVerified(true);
             setMessage(res.data?.message || 'Your email has been verified.');
             emitAuthChange('login');

@@ -3,6 +3,7 @@ import axios from 'axios';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { emitAuthChange } from '../utils/authEvents.js';
+import { confirmAuthenticatedSession } from '../utils/sessionAuth.js';
 
 axios.defaults.withCredentials = true;
 
@@ -31,8 +32,16 @@ export default function Login() {
         setLoading(true);
 
         try {
+            const loginPayload = { username, password, remember };
             await axios.get('/sanctum/csrf-cookie');
-            await axios.post('/api/auth/login', { username, password, remember });
+            await axios.post('/api/auth/login', loginPayload);
+            try {
+                await confirmAuthenticatedSession();
+            } catch (sessionError) {
+                await axios.get('/sanctum/csrf-cookie');
+                await axios.post('/api/auth/login', loginPayload);
+                await confirmAuthenticatedSession();
+            }
             emitAuthChange('login');
             navigate('/dashboard');
         } catch (err) {
@@ -49,7 +58,7 @@ export default function Login() {
             setError(
                 typeof msg === 'string' && msg.trim()
                     ? msg
-                    : 'We could not sign you in. Check your username or email and password, then try again.'
+                    : 'You were signed in, but the browser did not keep the session. Clear site data for 127.0.0.1 and try again.'
             );
         } finally {
             setLoading(false);
