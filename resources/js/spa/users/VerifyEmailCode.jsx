@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { CheckCircle2, Loader2, MailCheck } from 'lucide-react';
 import { emitAuthChange } from '../utils/authEvents.js';
-import { confirmAuthenticatedSession } from '../utils/sessionAuth.js';
+import { confirmAuthenticatedSession, wait } from '../utils/sessionAuth.js';
 
 axios.defaults.withCredentials = true;
 
 export default function VerifyEmailCode() {
     const location = useLocation();
-    const navigate = useNavigate();
     const [email, setEmail] = useState(location.state?.email || '');
     const [code, setCode] = useState('');
     const [error, setError] = useState('');
@@ -42,11 +41,16 @@ export default function VerifyEmailCode() {
                 email,
                 code,
             });
-            await confirmAuthenticatedSession();
             setVerified(true);
             setMessage(res.data?.message || 'Your email has been verified.');
+            await wait(300);
+            try {
+                await confirmAuthenticatedSession();
+            } catch {
+                await wait(700);
+            }
             emitAuthChange('login');
-            window.setTimeout(() => navigate('/dashboard'), 900);
+            window.location.assign('/clothshop/dashboard');
         } catch (err) {
             setError(err.response?.data?.message || 'This verification code is invalid or has expired.');
         } finally {
